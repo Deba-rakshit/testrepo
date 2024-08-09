@@ -1,0 +1,99 @@
+*PROCESS NOT('¬');
+ CUSVSAMP:/* RATIONAL DEVELOPER FOR SYSTEM Z DEMONSTRATION PROGRAM */
+          PROC OPTIONS(MAIN) REORDER;
+          /*-------------------------------------------------------*/
+          /*                                                       */
+          /*-------------------------------------------------------*/
+           DFT RANGE(*) ALIGNED ;
+          /*-------------------------------------------------------*/
+          /*  EXTERNAL ENTRIES                                     */
+          /*-------------------------------------------------------*/
+          DCL REGI0BP      ENTRY EXT RETURNS(FIXED BIN(31));
+          DCL REGI0CP      ENTRY EXT;
+          /*-------------------------------------------------------*/
+          /*  FILES                                                */
+          /*-------------------------------------------------------*/
+          DCL POTVSAM FILE RECORD ENV(VSAM) ;
+
+          DCL 1 POTVSAM_REC,
+          %INCLUDE POTVSAM ;;
+
+          /*-------------------------------------------------------*/
+          /*  WORKING STORAGE                                      */
+          /*-------------------------------------------------------*/
+          DCL EOF_POTVSAM      BIT(1) ALIGNED INIT('0'B);
+          DCL ABEND_IT         BIT(1) ALIGNED INIT('0'B);
+          DCL NUMERATOR        FIXED BIN(31);
+          DCL DENOMINATOR      FIXED BIN(31);
+          DCL RESULT           FIXED BIN(31);
+
+          /*-------------------------------------------------------*/
+          /*  ON CONDITIONS                                        */
+          /*-------------------------------------------------------*/
+          ON ENDFILE(POTVSAM)  EOF_POTVSAM = '1'B;
+
+          /*-------------------------------------------------------*/
+          /*  MAIN PROCESS                                         */
+          /*-------------------------------------------------------*/
+          PUT SKIP EDIT('CUSVSAMP Started ...')  (A) ;
+          CALL INITIALISE;
+          CALL PROCESS_1;
+          CALL PROCESS_2;
+          CALL TERMINATE;
+          PUT SKIP EDIT('CUSVSAMP Ended   ...')  (A) ;
+
+          /*-------------------------------------------------------*/
+          /*  SUBROUTINE : INITIALISE                              */
+          /*-------------------------------------------------------*/
+ INITIALISE:
+          PROC;
+          OPEN FILE(POTVSAM) INPUT;
+          END ; /* INITIALISE */
+
+          /*-------------------------------------------------------*/
+          /*  SUBROUTINE : PROCESS_1                               */
+          /*-------------------------------------------------------*/
+ PROCESS_1:
+          PROC;
+          PUT SKIP EDIT('  PROCESS 1 Started ...')  (A) ;
+          READ FILE(POTVSAM) INTO(POTVSAM_REC);
+          DO WHILE(¬EOF_POTVSAM);
+             PUT SKIP EDIT (CUST_NO ,
+                            CUST_FN ,
+                            CUST_LN )               (A);
+             IF SUBSTR(CUST_LN,1,1) = 'B'
+             THEN CALL REGI0CP(POTVSAM_REC);
+             READ FILE(POTVSAM) INTO(POTVSAM_REC);
+          END;  /* DO WHILE ... */
+          PUT SKIP EDIT('  PROCESS 1 Ended   ...')  (A) ;
+          END ; /* PROCESS_1 */
+
+          /*-------------------------------------------------------*/
+          /*  SUBROUTINE : PROCESS_2                               */
+          /*-------------------------------------------------------*/
+ PROCESS_2:
+          PROC;
+          PUT SKIP EDIT('  PROCESS 2 Started ...')  (A) ;
+
+          NUMERATOR = 21;
+
+          /*    IF ABEND_IT = '1'B    ==> NO ABEND  */
+          IF ABEND_IT = '0'B     /* ABEND */
+             THEN DENOMINATOR = 0;
+          ELSE DENOMINATOR = 1;
+
+          /* Will Invoke Program REGI0BP */
+          RESULT = REGI0BP (NUMERATOR, DENOMINATOR) ;
+
+          PUT SKIP EDIT('  PROCESS 2 Ended   ...')  (A) ;
+          END ; /* PROCESS_2 */
+
+          /*-------------------------------------------------------*/
+          /*  SUBROUTINE : TERMINATE                               */
+          /*-------------------------------------------------------*/
+ TERMINATE:
+          PROC;
+          CLOSE FILE(POTVSAM);
+
+          END ; /* TERMINATE */
+          END ; /* CUSVSAMP */

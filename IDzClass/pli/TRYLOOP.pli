@@ -1,0 +1,61 @@
+*PROCESS ;
+ /*********************************************************************
+  * Purpose: Write out the song 100 Bottles of Beer on the wall.
+  *
+  * Patterned from:
+  * http://99-bottles-of-beer.net/language-pl-i-548.html
+  *
+  * Written by LEE - 05/11/2009
+  *********************************************************************/
+
+ PLISUDS: PROC OPTIONS(MAIN);
+   Dcl Loop            Fixed(4,0);
+
+   Do Loop = 100 TO 0 BY -1;
+   /*  Bottles = Loop; */
+      Select;
+        When ((2 < Loop) & ( Loop <=100)) Begin;
+           Put Skip List (
+                  TRIM( EDIT(Loop, '(3)Z9' ) )
+               || " bottles of beer on the wall. "
+               || TRIM( EDIT(Loop, '(3)Z9' ) )
+               || " bottles of beer.");
+           Put Skip List (
+                  "Take one down and pass it around, "
+               || TRIM( EDIT(Loop-1, '(3)Z9' ) )
+               || " bottles of beer on the wall.");
+        End;
+        When (Loop = 2) Begin;
+           Put Skip List (
+                  TRIM( EDIT(Loop, '(3)Z9' ) )
+               || " bottles of beer on the wall. "
+               || TRIM( EDIT(Loop, '(3)Z9' ) )
+               || " bottles of beer.");
+           Put Skip List (
+                  "Take one down and pass it around, "
+               || TRIM( EDIT(Loop-1, '(3)Z9' ) )
+               || " bottle of beer on the wall.");
+        End;
+        When (Loop = 1) Begin;
+           Put Skip List (
+                  "One bottle of beer on the wall. "
+               || "One bottle of beer.");
+           Put Skip List (
+                 "Take one down and pass it around, "
+               ||"no bottles of beer on the wall.");
+        End;
+        When (Loop = 0) Begin;
+           Put Skip List (
+                 "No bottles of beer on the wall. "
+               ||"No bottles of beer.");
+           Put Skip List (
+                 "Go to the store and buy some more. "
+               ||"No bottles of beer on the wall.");
+        End;
+        Otherwise ;
+      End;
+   End;
+
+   Put Skip List("Time to go.");
+
+ END PLISUDS;

@@ -1,0 +1,123 @@
+ PSAMM2: PROCEDURE(CUSTFILE_RECORD,
+                  CUSTOMER_BALANCE_STATS);
+ /****************************************************************
+  * PROGRAM:  PSAMM2   (PLI FOR MVS AND VM)
+  *
+  * AUTHOR :  Doug Stout
+  *           IBM PD TOOLS
+  *
+  * SUBROUTINE - CALLED BY PSAMM1
+  * COLLECTS STATISTICS FOR CUSTOMER RECORDS
+  *
+  * THIS EXAMPLE APPLICATION IS A TEACHING AID.  INTENDED USES ARE:
+  *   FOR DEBUG TOOL WORKSHOP:
+  *      - DETERMINE WHY THE MAX VALUE IS INCORRECT IN THE REPORT
+  *      - INTERCEPT THE ABEND THAT CAN OCCUR IN SUBROUTINE PSAMM2
+  *   FOR FAULT ANALYZER WORKSHOP:
+  *      - DETERMINE WHY THE PSAMM2 PROGRAM ABENDS IN SOME CASES
+  *   FOR APPLICATION PERFORMANCE ANALYZER WORKSHOP:
+  *      - DETERMINE WHERE THE APPLICATION IS SPENDING THE MOST TIME
+  ****************************************************************/
+
+   DCL DUMP_FINDER CHAR(30) INIT('*STORAGE FOR PROGRAM PSAMM2***');
+
+   /***************************************************/
+   /* CUSTOMER RECORD (Passed from calling program)   */
+   /***************************************************/
+
+   /* %INCLUDE CUST2PLI; */
+   /*   ---------------------------------------------------   */
+   /*   DESCRIBES FILE <USERID>.ADLAB.FILES(CUST2)            */
+   /*   ---------------------------------------------------   */
+   DCL 1 CUSTFILE_RECORD     CHAR(80);
+   DCL 1 CUSTOMER_RECORD  BASED(ADDR(CUSTFILE_RECORD)),
+         2 CUSTOMER_KEY,
+           3 CUST_ID         CHAR(5),
+           3 RECORD_TYPE     CHAR(1),
+           3 CUST_KEY_FILL   CHAR(7),
+         2 NAME              CHAR(17),
+         2 ACCT_BALANCE      FIXED DEC (9,2) UNALIGNED,
+         2 ORDERS_YTD        FIXED BINARY(15,0) UNALIGNED,
+         2 CITY              CHAR(15),
+         2 OCCUPATION        CHAR(28);
+   DCL 1 PRODUCT_RECORD   BASED(ADDR(CUSTFILE_RECORD)),
+         2 PRODUCT_KEY,
+           3 CUST_ID         CHAR(5),
+           3 RECORD_TYPE     CHAR(1),
+           3 PRODUCT_ID      CHAR(7),
+         2 PRODUCT_NAME      CHAR(25),
+         2 DATE_PURCHASED    CHAR(10),
+         2 SERVICE_CALLS     FIXED BINARY(15,0) UNALIGNED,
+         2 LAST_SERVICE_CALL CHAR(10),
+         2 PROD_RECORD_FILL  CHAR(20);
+
+   /***********************************************************/
+   /* Statistics Accumulators (Passed from calling program)   */
+   /***********************************************************/
+
+   DCL 1 CUSTOMER_BALANCE_STATS,
+         2 BALANCE_COUNT     DEC(8),
+         2 BALANCE_TOTAL     DEC(12,2),
+         2 BALANCE_MIN       DEC(12,2),
+         2 BALANCE_MAX       DEC(12,2),
+         2 BALANCE_RANGE     DEC(12,2),
+         2 BALANCE_AVG       DEC(12,2),
+         2 BALANCE_FIRST_TIME_SW    PIC '9';
+
+   /********************/
+   /* GENERAL DECLARES */
+   /********************/
+
+   DCL PROGRAM_STATUS        CHAR(30);
+
+   /*****************************************************
+    * PSAMM2 PROGRAM ROUTINE                            *
+    *****************************************************/
+
+   ALLOCATE PROGRAM_STATUS;
+   PROGRAM_STATUS = 'PROGRAM STARTED';
+   IF ( BALANCE_FIRST_TIME_SW ) THEN DO;
+     PROGRAM_STATUS = 'ZEROING STATS VARIABLES';
+     BALANCE_COUNT  = 0;
+     BALANCE_TOTAL  = 0;
+     BALANCE_MIN    = 0;
+     BALANCE_MAX    = 0;
+     BALANCE_RANGE  = 0;
+     BALANCE_AVG    = 0;
+     BALANCE_FIRST_TIME_SW = 0;
+   END;
+
+   PROGRAM_STATUS = 'CALCULATING BALANCE STATS';
+            /* Increment Record Count */
+   BALANCE_COUNT = BALANCE_COUNT + 1;
+            /* Add this customer's BALANCE to the grand total */
+   BALANCE_TOTAL = BALANCE_TOTAL + ACCT_BALANCE;
+            /* Calculate Average */
+   BALANCE_AVG = BALANCE_TOTAL / BALANCE_COUNT;
+            /* Calculate Minimum */
+   IF ( BALANCE_FIRST_TIME_SW ) THEN DO;
+     BALANCE_MIN = ACCT_BALANCE;
+   END;
+   IF ( ACCT_BALANCE < BALANCE_MIN ) THEN
+     BALANCE_MIN = ACCT_BALANCE;
+            /* Calculate Maximum */
+           /*    There is a bug calculating the maximum.  */
+           /*             Can you find it?                */
+   IF ( BALANCE_FIRST_TIME_SW ) THEN DO;
+     BALANCE_MAX = ACCT_BALANCE;
+   IF ( ACCT_BALANCE > BALANCE_MAX ) THEN
+     BALANCE_MAX = ACCT_BALANCE;
+   END;
+
+             /* Calculate Range   */
+   BALANCE_RANGE = BALANCE_MAX - BALANCE_MIN;
+
+   BALANCE_FIRST_TIME_SW = 0;
+
+   PROGRAM_STATUS = 'PROGRAM ENDING';
+   FREE PROGRAM_STATUS;
+
+   RETURN;
+
+ PROGRAM_END:
+ END PSAMM2;

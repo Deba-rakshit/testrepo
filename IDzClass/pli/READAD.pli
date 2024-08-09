@@ -1,0 +1,67 @@
+*Process SOURCE, MACRO, TEST;
+ /* XINFO(MSG,SYM);  This causes the PL/I compiler to ABEND! */
+ /********************************************************************/
+ /*                                                                  */
+ /* READAD - PL/I Program to read the contents of an ADATA File      */
+ /*                                                                  */
+ /* On windows: set dd:InFile=<sourceFileLocation>                   */
+ /*             The path cannot contain spaces!!                     */
+ /*                                                                  */
+ /* On MVS //INFILE DD DSN=<sourceFileDSN>,DISP=SHR                  */
+ /*        //SYSPRINT DD SYSOUT=*                                    */
+ /*                                                                  */
+ /********************************************************************/
+
+ ReadAD: Procedure Options(main);
+
+    Dcl Sysprint      File Output Stream;
+    Dcl Sysin         File Input  Stream;
+    Dcl InFile        File Input  Record   Env(Recsize(8188));
+    Dcl Buffer        Char(8188)  Var;
+    Dcl FirstPart     Char(80)    Var;
+    Dcl Substr        Builtin;
+
+    Dcl NumberOfRecs  Fixed Bin(31) Init(0);
+
+    Dcl True          Bit(1)      Init('1'B);
+    Dcl False         Bit(1)      Init('0'B);
+    Dcl EndOfFile     Bit(1)      Init(False);
+    Dcl GoodFile      Bit(1)      Init(True);
+
+    On Endfile( InFile )
+       EndOfFile = True;
+       Begin;
+          EndOfFile = True;
+          GoodFile = False;
+       End;
+
+    Put Skip File(Sysprint) List("Starting READ Adata!");
+    Put Skip File(Sysprint) List("==========================");
+
+    Open File(InFile);
+
+    If (GoodFile) Then
+       Do;
+          Read File( InFile ) into (Buffer);
+
+          Do While ( EndOfFile = False );
+             NumberOfRecs = NumberOfRecs + 1;
+             Read File( InFile ) into (Buffer);
+          End;
+
+       End;
+    Else
+       Do;
+           Put Skip File(Sysprint) List("Could not open the file.");
+       End;
+
+    Close File(InFile);
+
+    Put Skip File(Sysprint)
+             List("Number of Records in the Adata File is",
+                                  NumberOfRecs );
+    Put Skip File(Sysprint)
+             List("Exiting Read Adata Program!");
+
+    Close File(Sysprint);
+ End;

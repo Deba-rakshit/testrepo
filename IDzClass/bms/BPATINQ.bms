@@ -1,0 +1,72 @@
+* comments?
+BINQ400  DFHMSD TYPE=&SYSPARM,                                         X
+               LANG=COBOL,                                             X
+               MODE=INOUT,                                             X
+               TIOAPFX=YES
+BINQ400  DFHMDI SIZE=(24,80),                                          *
+               COLUMN=1,                                               *
+               LINE=1
+         DFHMDF POS=(02,65),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=005,                                             X
+               INITIAL='DATE:'
+DATE     DFHMDF POS=(02,71),                                           X
+               ATTRB=(ASKIP,FSET),                                     X
+               LENGTH=008
+         DFHMDF POS=(03,65),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=005,                                             X
+               INITIAL='TIME:'
+TIME     DFHMDF POS=(03,71),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=008
+         DFHMDF POS=(04,32),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=014,                                             X
+               INITIAL='RECORD INQUIRY'
+         DFHMDF POS=(06,04),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=014,                                             X
+               INITIAL='PERSON NUMBER:'
+PERSONN  DFHMDF POS=(06,19),                                           X
+               ATTRB=(UNPROT,IC),                                      X
+               LENGTH=010
+         DFHMDF POS=(06,30),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=001
+         DFHMDF POS=(08,04),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=011,                                             X
+               INITIAL='FIRST NAME:'
+FNAME    DFHMDF POS=(08,16),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=012
+         DFHMDF POS=(9,4),LENGTH=10,INITIAL='LAST NAME:',              *
+               ATTRB=ASKIP
+LNAME    DFHMDF POS=(9,15),LENGTH=15,                                  *
+               ATTRB=ASKIP
+         DFHMDF POS=(10,4),LENGTH=7,INITIAL='STREET:',                 *
+               ATTRB=ASKIP
+STREET   DFHMDF POS=(10,12),LENGTH=16,                                 *
+               ATTRB=ASKIP
+         DFHMDF POS=(11,4),LENGTH=5,INITIAL='CITY:',                   *
+               ATTRB=ASKIP
+DIAG     DFHMDF POS=(11,10),LENGTH=12,                                 *
+               ATTRB=ASKIP
+         DFHMDF POS=(11,30),LENGTH=6,INITIAL='STATE:',                 *
+               ATTRB=ASKIP
+STATE    DFHMDF POS=(11,37),LENGTH=2,                                  *
+               ATTRB=ASKIP
+         DFHMDF POS=(12,4),LENGTH=7,INITIAL='SALARY:',                 *
+               ATTRB=ASKIP
+SALARY   DFHMDF POS=(12,12),LENGTH=7,                                  *
+               ATTRB=ASKIP,PICOUT='9(7)'
+INSTR    DFHMDF POS=(22,19),                                           X
+               ATTRB=(PROT,BRT),                                       X
+               LENGTH=040,                                             X
+               INITIAL=' ENTER A PERSON NUMBER AND PRESS <ENTER> '
+MSG      DFHMDF POS=(23,20),                                           X
+               ATTRB=(PROT,BRT),                                       X
+               LENGTH=040
+         DFHMSD TYPE=FINAL
+         END

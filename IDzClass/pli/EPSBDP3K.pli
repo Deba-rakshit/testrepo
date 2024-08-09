@@ -1,0 +1,116 @@
+ EPSBDP3: PROC (CA_PTR) OPTIONS(MAIN,REENTRANT) REORDER;                00010001
+  /************************************************************/        00020000
+  /*     THIS IS A SAMPLE PROGRAM FOR DEMONSTRATION           */        00030001
+  /*                                                          */        00040000
+  /*     THIS PROGRAM WILL BE CALLED BY ANOTHER, RECEIVE A    */        00041001
+  /*     DATE(YYMMDD) AND DETERMINE A PROPER FORMATTED        */        00042001
+  /*     RETIREMENT DATE.                                     */        00043001
+  /*                                                          */        00080000
+  /*     (C) 2004 IBM - KEVIN J. CUMMINGS RESERVED.           */        00090001
+  /*         TRANSLATED INTO PL/1 BY ALAN SCHWARTZ OCT 2006   */        00100000
+  /************************************************************/        00110000
+    DCL CEEDAYS EXTERNAL ENTRY OPTIONS(ASSEMBLER);                      00120000
+    DCL CEEDATE EXTERNAL ENTRY OPTIONS(ASSEMBLER);                      00130000
+                                                                        00140000
+    DCL CA_PTR PTR;                                                     00150000
+    DCL 01 W_ADC03_LINKAGE_AREA BASED(CA_PTR),                          00161001
+           10 W_BIRTHDATE_IN,                                           00162001
+              15 W_BD_YYYY                     PIC '(4)9',              00163001
+              15 W_BD_MM                       PIC '(2)9',              00164001
+              15 W_BD_DD                       PIC '(2)9',              00165001
+           10 W_RETIREMENT_DATE                PIC '(80)X',             00166001
+           10 W_PROGRAM_RETCODE                PIC '(4)9' INIT(0),      00167001
+           10 W_RETIREMENT_ERRMSG              PIC '(30)X',             00169001
+           10 W_FORCE_ABEND                    FIXED DEC(3,0);          00169101
+                                                                        00170001
+    DCL 01 REQUEST_RESULT,                                              00171001
+           10 W_ADC03_REQUEST_SUCCESS  PIC '(4)9' INIT(0);              00180001
+                                                                        00240000
+    DCL W_BIRTHDATE_IN_STRING CHAR(8) BASED(ADDR(W_BIRTHDATE_IN));      00241001
+                                                                        00242001
+   DCL W_WORK_DATE                       FIXED BIN(31);                 00250001
+   DCL LILIAN                            FIXED BIN(31);                 00260001
+   DCL CHRDATE                           CHAR(80);                      00270001
+                                                                        00280001
+   DCL IN_DATE CHAR(255) VARYING;                                       00290001
+                                                                        00320001
+   DCL PICSTR CHAR(255) VARYING;                                        00330001
+                                                                        00360000
+    DCL 01 FC,                                                          00370000
+        10  FC_SEV         FIXED BIN(15),                               00380000
+        10  FC_MSG         FIXED BIN(15),                               00390000
+        10  FC_FLAGS,                                                   00400000
+            15 FC_CASE     BIT(2),                                      00410000
+            15 FC_SEVERITY BIT(3),                                      00420000
+            15 FC_CONTROL  BIT(3),                                      00430000
+        10  FC_FAC         CHAR(3),                                     00440000
+        10  FC_ISI         FIXED BIN(31);                               00450000
+                                                                        00450101
+     CALL A100_DETERMINE_RETIREMENT;                                    00451001
+     IF (W_PROGRAM_RETCODE = 0) THEN DO;                                00452001
+        CALL A200_FORMAT_DATE;                                          00453001
+      END;                                                              00453101
+     EXEC CICS RETURN;                                                  00454001
+                                                                        00460000
+     A100_DETERMINE_RETIREMENT: PROC;                                   00760001
+       /****************************************************/           00770001
+       /** ADD 65 TO BIRTH DATE AND CALL CEEDAYS TO       **/           00780001
+       /** GET LILIAN DATE (NO DAYS FROM 1582/08/14)      **/           00790001
+       /****************************************************/           00800001
+                                                                        00810001
+         W_BD_YYYY = W_BD_YYYY + 65;                                    00820001
+         IN_DATE = W_BIRTHDATE_IN_STRING;                               00850001
+         IF (SUBSTR(IN_DATE,5,4) = '0229') THEN DO;                     00860005
+             SUBSTR(IN_DATE,5,4) = '0228';                              00860105
+         END;                                                           00861004
+         PICSTR = 'YYYYMMDD';                                           00870002
+         CALL CEEDAYS (IN_DATE, PICSTR, LILIAN, FC);                    00880001
+                                                                        00881001
+       /*************************************************/              00890001
+       /** IF CEEDAYS RUNS SUCCESSFULLY, THEN ADD +65  **/              00900001
+       /** TO BIRTHDATE TO DETERMINE RETIREMENT DATE   **/              00910001
+       /*************************************************/              00920001
+             IF (FC_SEV = 0) THEN DO;                                   00930001
+                 W_PROGRAM_RETCODE = 0;                                 00940002
+             END;                                                       00941001
+             ELSE DO;                                                   00950001
+                 W_RETIREMENT_ERRMSG = 'ERROR IN CALL TO CEEDAYS';      00960001
+                 W_PROGRAM_RETCODE = FC_MSG;                            00970001
+             END;                                                       00980001
+         RETURN;                                                        01010001
+     END A100_DETERMINE_RETIREMENT;                                     01011001
+                                                                        01011101
+     A200_FORMAT_DATE: PROC;                                            01012001
+       /*************************************************/              01012101
+       /** SPECIFY PICTURE STRING THAT DESCRIBES THE   **/              01012201
+       /**  DESIRED FORMAT OF THE OUTPUT FROM CEEDATE, **/              01012301
+       /**  AND THE PICTURE STRING'S LENGTH.           **/              01012401
+       /*************************************************/              01012501
+             PICSTR = "WWWWWWWWWWZ, ZD MMMMMMMMMMMMMMZ YYYY";           01012703
+                                                                        01012901
+       /*************************************************/              01013001
+       /** CALL CEEDATE TO CONVERT THE LILIAN DATE     **/              01013101
+       /**     TO  A PICTURE STRING.                   **/              01013201
+       /*************************************************/              01013301
+             CALL CEEDATE (LILIAN, PICSTR, CHRDATE, FC);                01013401
+                                                                        01013601
+                                                                        01013701
+       /*************************************************/              01013801
+       /** IF CEEDATE RUNS SUCCESSFULLY, DISPLAY RESULT**/              01013901
+       /*************************************************/              01014001
+             IF (FC_SEV = 0) THEN DO;                                   01014101
+                 W_RETIREMENT_DATE = CHRDATE;                           01014202
+             END;                                                       01014301
+             ELSE DO;                                                   01014401
+                 W_RETIREMENT_ERRMSG = 'ERROR IN CALL TO CEEDATE';      01014502
+                 W_PROGRAM_RETCODE = FC_MSG;                            01014602
+             END;                                                       01014701
+       /* FOLLOWING IS SIMPLY TO FORCE ABEND FOR     */                 01014801
+       /* DEMONSTRATION OF FAULT ANALYZER UNDER CICS */                 01014901
+       /*                                            */                 01015002
+       /*    ADD 1 TO W_FORCE_ABEND                  */                 01015102
+       /*    .                                       */                 01015202
+       /* END OF PROGRAM                             */                 01015301
+       RETURN;                                                          01015401
+     END A200_FORMAT_DATE;                                              01016001
+ END EPSBDP3;                                                           01030001

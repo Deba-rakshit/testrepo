@@ -1,0 +1,374 @@
+ EPSBDP1: PROC (CA_PTR) OPTIONS(MAIN,REENTRANT) REORDER;                00010003
+  /***************************************************************/     00010144
+  /*    THIS DEMONSTRATES CICS/DEBUG           - EPSDEMOS 2006   */     00011044
+  /*                                                             */     00012044
+  /*    THIS PROGRAM WILL RECEIVE A DATE AND COVERT THE DATE TO  */     00013044
+  /*    AN INTEGER IN A CALLED PROGRAM TO DETERMINE DAYS FROM    */     00014044
+  /*    CURRENT DATE.                                            */     00015044
+  /*                                                             */     00016044
+  /*    (C) 2004 IBM - KEVIN J. CUMMINGS RESERVED.               */     00017044
+  /*        TRANSLATED INTO PL/1 BY ALAN SCHWARTZ OCT 2006       */     00017144
+  /***************************************************************/     00018044
+    DCL CA_PTR PTR;                                                     00020004
+    DCL 01 DFHCOMMAREA BASED(CA_PTR),                                   00030002
+           10  PROCESS_INDICATOR               PIC '(1)X',              00040005
+           10  DATE_INDICATOR                  PIC '(1)X',              00050005
+           10  DAY_DIFFERENCE                  PIC '(9)9',              00060005
+           10  DATE_FORMATTED                  PIC '(29)X',             00070005
+           10  RETIREMENT_INDICATOR            PIC '(1)X',              00080005
+           10  RETIREMENT_DATE                 PIC '(29)X',             00090005
+           10  INPUT_DATE,                                              00100005
+               15  INPUT_DATE_CCYY             PIC '(4)X',              00110005
+               15  INPUT_DATE_MM               PIC '(2)X',              00120005
+               15  INPUT_DATE_DD               PIC '(2)X',              00130005
+           10 EPS02_PROGRAM_RETCODE            PIC '(4)9';              00140006
+                                                                        00150007
+    DCL W_SEND_FLAG                      PIC '(1)X';                    00160011
+    DCL 01 W_SEND_FLAG_VALUES,                                          00170007
+           10  SEND_ERASE                PIC '(1)X'  INIT('1'),         00180011
+           10  SEND_DATAONLY             PIC '(1)X'  INIT('2'),         00190011
+           10  SEND_MAPONLY              PIC '(1)X'  INIT('3'),         00200011
+           10  SEND_DATAONLY_ALARM       PIC '(1)X'  INIT('4');         00210011
+                                                                        00220007
+    DCL W_DATE_SW                        PIC '(1)X';                    00230012
+    DCL 01 INTERFACE_AREA,                                              00240008
+           05 L_INPUT_DATE,                                             00250008
+              10 L_YYYY                        PIC '(4)9' INIT(0),      00260010
+              10 L_MM                          PIC '(2)9' INIT(0),      00270010
+              10 L_DD                          PIC '(2)9' INIT(0),      00280010
+           05 L_DAY_DIFFERENCE                 PIC '(9)9',              00290008
+           05 L_DATE_FORMATTED                 PIC '(29)X',             00300008
+           05 L_PROGRAM_RETCODE                PIC '(4)9';              00310008
+    DCL INTERFACE_AREA_LENGTH FIXED BIN(15) VALUE(50);                  00311043
+                                                                        00320010
+    DCL 01  W_COMMUNICATION_AREA,                                       00330012
+           10 W_PROCESS_INDICATOR_SW           PIC '(1)X',              00340008
+           10  W_DATE_INDICATOR                PIC '(1)X',              00350008
+           10  W_DAY_DIFFERENCE                PIC '(9)9',              00360008
+           10  W_DATE_FORMATTED                PIC '(29)X',             00370008
+           10  W_RETIREMENT_INDICATOR          PIC '(1)X',              00380013
+           10  W_CA_RETIREMENT_DATE            PIC '(29)X',             00390014
+           10  W_INPUT_BIRTHDATE,                                       00400013
+               15  W_INPUT_DATE_CCYY           PIC '(4)X',              00410008
+               15  W_INPUT_DATE_MM             PIC '(2)X',              00420008
+               15  W_INPUT_DATE_DD             PIC '(2)X',              00430008
+           10 W_EPS02_PROGRAM_RETCODE          PIC '(4)9';              00440008
+    DCL W_COMMUNICATION_AREA_STRING CHAR(82)                            00441036
+                                 BASED(ADDR(W_COMMUNICATION_AREA));     00441138
+                                                                        00450013
+                                                                        00460024
+    DCL W_BIRTHDATE_CHARS  CHAR(8) BASED(ADDR(W_INPUT_BIRTHDATE));      00470028
+    DCL W_NUMERIC_BIRTHDATE CHAR(1);                                    00480024
+                                                                        00490024
+    DCL W_DAYS_IN_BIRTH_MONTH FIXED BIN(15);                            00491047
+    DCL W_DAYS_IN_MONTH(12) FIXED BIN(15)                               00491147
+                INIT(31,28,31,30,31,30,31,31,30,31,30,31);              00492047
+                                                                        00500024
+    DCL 01 W_REQUEST_SUCCESS_VALUES,                                    00510008
+           10 W_EPS02_REQUEST_SUCCESS          PIC '(1)X' INIT(0),      00520008
+           10 EPS02_REQUEST_SUCCESS            PIC '(1)X' INIT(0),      00530014
+           10 W_EPS03_REQUEST_SUCCESS          PIC '(1)X' INIT(0);      00540016
+                                                                        00550014
+    DCL W_CALL_PROGRAM                         PIC '(8)X';              00560014
+                                                                        00570014
+    DCL W_RETIREMENT_WA                        PIC '(4)9';              00580014
+                                                                        00590020
+    DCL LOW_VALUES CHAR(1920) BASED(ADDR(LV));                          00600021
+    DCL 01 LV,                                                          00610021
+        05 LV_CHARS(1920) BIT(8) INIT((1920)('00000000'B));             00620023
+                                                                        00630014
+    DCL 01 W_EPS03_LINKAGE_AREA,                                        00640014
+           10 W_EPS03_DATE_IN,                                          00650014
+              15 W_RET_YYYY                    PIC '(4)X',              00660014
+              15 W_RET_MM                      PIC '(2)X',              00670014
+              15 W_RET_DD                      PIC '(2)X',              00680014
+           10 W_RETIREMENT_DATE                PIC '(80)X',             00690014
+           10 W_EPS03_PROGRAM_RETCODE          PIC '(4)9' INIT(0),      00700014
+           10 W_RETIREMENT_ERRORMSG            PIC '(30)X';             00710014
+    DCL W_EPS03_LINKAGE_AREA_LENGTH    FIXED BIN(15) INIT(122);         00711045
+                                                                        00720014
+    DCL END_OF_TRANS_MSG                 PIC '(30)X'                    00730014
+                  INIT('END OF TRANSACTION - THANK YOU');               00740014
+    %INCLUDE DFHAIDP;                                                   00750015
+    %INCLUDE EPSP1MP;                                                   00760015
+    %INCLUDE DFHEIB;                                                    00760101
+    DCL EPSP1MO_STRING CHAR(521) BASED(ADDR(EPSP1MO));                  00761037
+                                                                        00762036
+      W_COMMUNICATION_AREA = DFHCOMMAREA;                               00770017
+      SELECT;                                                           00780017
+        WHEN (EIBCALEN = 0) DO;                                         00790021
+            EPSP1MO_STRING =                                            00800037
+                       SUBSTR(LOW_VALUES,1,LENGTH(EPSP1MO_STRING));     00801037
+            W_COMMUNICATION_AREA_STRING = ' ';                          00810035
+            W_SEND_FLAG = SEND_ERASE;                                   00820017
+            EPBDAYL = -1;                                               00830017
+            UNSPEC(EPBDAYIA) = '11001001'B;        /* X'C9' */          00840022
+            CALL A300_SEND_MAP;                                         00850017
+        END;                                                            00860017
+        WHEN (EIBAID = DFHCLEAR) DO;                                    00870017
+            EPSP1MO_STRING =                                            00880037
+                       SUBSTR(LOW_VALUES,1,LENGTH(EPSP1MO_STRING));     00881037
+            W_COMMUNICATION_AREA_STRING = ' ';                          00890035
+            W_SEND_FLAG = SEND_ERASE;                                   00900017
+            EPBDAYL = -1;                                               00910024
+            CALL A300_SEND_MAP;                                         00920017
+        END;                                                            00930017
+        WHEN ((EIBAID = DFHPF3) | (EIBAID = DFHPF12))  DO;              00940017
+            EXEC CICS                                                   00950017
+               SEND TEXT FROM (END_OF_TRANS_MSG)                        00960017
+               ERASE                                                    00970017
+               FREEKB;                                                  00980017
+            EXEC CICS                                                   00990017
+                 RETURN;                                                01000017
+        END;                                                            01010017
+        WHEN (EIBAID = DFHENTER) DO;                                    01020017
+            CALL A100_PROCESS_MAP;                                      01030017
+        END;                                                            01040017
+         OTHERWISE DO;                                                  01050017
+            UNSPEC(MSGERRA) = '11101000'B;        /* X'E8' */           01060022
+            EPSP1MO_STRING =                                            01070037
+                       SUBSTR(LOW_VALUES,1,LENGTH(EPSP1MO_STRING));     01071037
+            W_SEND_FLAG = SEND_DATAONLY_ALARM;                          01080017
+            CALL A300_SEND_MAP;                                         01090017
+          END;                                                          01100017
+      END;                                                              01110017
+      EXEC CICS                                                         01120017
+          RETURN TRANSID('EPP1')                                        01130017
+          COMMAREA(W_COMMUNICATION_AREA);                               01140017
+                                                                        01150017
+ A100_PROCESS_MAP: PROC;                                                01160017
+      CALL A400_RECEIVE_MAP;                                            01170024
+      W_PROCESS_INDICATOR_SW = EPBDAYII;                                01180024
+      SELECT;                                                           01190027
+        WHEN (W_PROCESS_INDICATOR_SW= '1') DO;                          01200027
+            W_BIRTHDATE_CHARS = EPBDAYI;                                01210041
+            CALL A500_VERIFY_INPUT_DATE;                                01220024
+            SELECT;                                                     01230027
+               WHEN (W_DATE_SW = 'X') DO;                               01240027
+                 W_SEND_FLAG = SEND_ERASE;                              01250024
+                 CALL A300_SEND_MAP;                                    01260024
+               END;           /* WHEN W_DATE_SW = 'X' */                01270024
+               WHEN (W_DATE_SW = 'A') DO;                               01280027
+                 CALL A600_CALL_DAY_DIFFERENCE;                         01290024
+                 MSGERRO = ' ';                                         01300024
+                 UNSPEC(EPBDFMTA) = '11110001'B;                        01310024
+                 EPBDFMTC = '2';                                        01320026
+                 UNSPEC(EPBDFM1A) = '11110001'B;                        01330024
+                 EPBDFM1C = '2';                                        01340026
+                 UNSPEC(EPBDFM2A) = '11111000'B;                        01350024
+                 EPBDFM2C = '1';                                        01360026
+                 UNSPEC(EPDIFF1A) = '11110001'B;                        01370024
+                 EPDIFF1C = '2';                                        01380026
+                 UNSPEC(EPDIFF2A) = '11111000'B;                        01390024
+                 EPDIFF2C = '1';                                        01400026
+                 UNSPEC(EPDIFF3A) = '11110001'B;                        01410024
+                 EPDIFF3C = '2';                                        01420026
+                 UNSPEC(EPBDAYA)  = '01100001'B;                        01430024
+                 EPBDAYIL = -1;                                         01440024
+                 IF (W_RETIREMENT_INDICATOR = 'Y') THEN DO;             01450024
+                    EPRET2O = W_CA_RETIREMENT_DATE;                     01460024
+                    UNSPEC(EPBRETA) = '11110001'B;                      01470024
+                    EPBRETC ='2';                                       01480026
+                    UNSPEC(EPRET1A) = '11110001'B;                      01490024
+                    UNSPEC(EPRET2A) = '11110001'B;                      01500024
+                 END;                                                   01510024
+                 W_SEND_FLAG = SEND_DATAONLY;                           01520024
+                 CALL A300_SEND_MAP;                                    01530027
+               END;           /* WHEN W_DATE_SW = 'A' */                01540024
+                 OTHERWISE;                                             01550024
+            END;    /* SELECT ON W_DATE_SW*/                            01560024
+        END;  /* WHEN W_PROCESS_INDICATOR_SW = '1' */                   01570027
+        WHEN (W_PROCESS_INDICATOR_SW= '2') DO;                          01571027
+            W_BIRTHDATE_CHARS = EPBDAYI;                                01600041
+            W_EPS03_DATE_IN = W_INPUT_BIRTHDATE;                        01601041
+            CALL A500_VERIFY_INPUT_DATE;                                01610024
+            SELECT;                                                     01620027
+               WHEN (W_DATE_SW = 'X') DO;                               01630027
+                 W_SEND_FLAG = SEND_ERASE;                              01640024
+                 CALL A300_SEND_MAP;                                    01650024
+               END;           /* WHEN W_DATE_SW = 'X' */                01660024
+               WHEN (W_DATE_SW = 'A') DO;                               01670027
+                 CALL A600_CALCULATE_RETIREMENT;                        01680027
+                 MSGERRO = ' ';                                         01690024
+                 EPBDFMTA ='%';                                         01700024
+                 EPBDFM1A ='%';                                         01710024
+                 EPBDFM2A ='%';                                         01720024
+                 EPDIFF2A ='%';                                         01730024
+                 UNSPEC(EPBRETA) = '11110001'B;                         01740024
+                 EPBRETC = '2';                                         01750026
+                 UNSPEC(EPRET1A) = '11110001'B;                         01760024
+                 EPRET1C = '2';                                         01770026
+                 UNSPEC(EPRET2A) = '11110001'B;                         01780024
+                 EPRET2C = '1';                                         01790026
+                 UNSPEC(EPBDAYA) = '01100001'B;                         01800024
+                 EPBDAYIL = -1;                                         01810024
+                 IF (W_DATE_INDICATOR = 'Y') THEN DO;                   01820024
+                    EPBDFM2O = W_DATE_FORMATTED;                        01830024
+                    EPDIFF2O = W_DAY_DIFFERENCE;                        01840024
+                    UNSPEC(EPBDFMTA) = '11110001'B;                     01850025
+                    EPBDFMTC = '2';                                     01860026
+                    UNSPEC(EPBDFM1A) = '11110001'B;                     01870025
+                    EPBDFM1C = '2';                                     01880026
+                    UNSPEC(EPBDFM2A) = '11111000'B;                     01890025
+                    EPBDFM2C = '1';                                     01900026
+                    UNSPEC(EPDIFF1A) = '11110001'B;                     01910025
+                    EPDIFF1C = '2';                                     01920026
+                    UNSPEC(EPDIFF2A) = '11111000'B;                     01930025
+                    EPDIFF2C = '1';                                     01940026
+                    UNSPEC(EPDIFF3A) = '11110001'B;                     01950025
+                    EPDIFF3C = '2';                                     01960026
+                    UNSPEC(EPBDAYA) = '01100001'B;                      01970025
+                 END;                                                   01980024
+                 W_SEND_FLAG = SEND_DATAONLY;                           01990024
+                 CALL A300_SEND_MAP;                                    02000024
+               END;           /* WHEN W_DATE_SW = 'A' */                02010024
+                 OTHERWISE;                                             02020024
+            END;    /* SELECT ON W_DATE_SW*/                            02030024
+        END;  /* WHEN W_PROCESS_INDICATOR_SW = '2' */                   02040027
+         OTHERWISE DO;                                                  02050024
+            MSGERRO =  'UNRECOGNIZED REQUEST';                          02060024
+            UNSPEC(MSGERRA) = '11001000'B;                              02070024
+            W_SEND_FLAG = SEND_DATAONLY;                                02080024
+            CALL A300_SEND_MAP;                                         02090024
+         END;  /* OTHERWISE FOR W_PROCESS_INDICATOR_SW */               02100024
+      END;   /* SELECT ON W_PROCESS_INDICATOR_SW */                     02110024
+   RETURN;                                                              02120024
+ END A100_PROCESS_MAP;                                                  02130024
+                                                                        02140017
+ A300_SEND_MAP: PROC;                                                   02150017
+      SELECT(W_SEND_FLAG);                                              02160024
+         WHEN(SEND_MAPONLY)                                             02170039
+              EXEC CICS                                                 02180024
+                SEND MAP ('EPSP1M')                                     02190037
+                  MAPSET('EPSP1MP')                                     02200040
+                  MAPONLY                                               02210024
+                  CURSOR;                                               02220024
+         WHEN(SEND_ERASE)                                               02230039
+              EXEC CICS                                                 02240024
+                SEND MAP ('EPSP1M')                                     02250037
+                    MAPSET('EPSP1MP')                                   02260040
+                    FROM(EPSP1MO)                                       02270037
+                    ERASE                                               02280024
+                    CURSOR;                                             02290024
+         WHEN(SEND_DATAONLY)                                            02300039
+              EXEC CICS                                                 02310024
+                SEND MAP ('EPSP1M')                                     02320037
+                    MAPSET('EPSP1MP')                                   02330040
+                    FROM(EPSP1MO)                                       02340037
+                    DATAONLY                                            02350024
+                    CURSOR;                                             02360024
+          OTHERWISE;                                                    02370024
+      END;                                                              02380024
+   RETURN;                                                              02390017
+ END A300_SEND_MAP;                                                     02400018
+                                                                        02410024
+ A400_RECEIVE_MAP: PROC;                                                02420024
+      EXEC CICS                                                         02430024
+           RECEIVE MAP('EPSP1M')                                        02440024
+              MAPSET('EPSP1MP')                                         02450024
+              INTO (EPSP1MI);                                           02460037
+   RETURN;                                                              02470024
+ END A400_RECEIVE_MAP;                                                  02480024
+                                                                        02490024
+ A500_VERIFY_INPUT_DATE: PROC;                                          02500024
+      DCL I BIN;                                                        02500102
+      W_NUMERIC_BIRTHDATE = 'Y';                                        02510024
+      DO I = 1 TO 8;                                                    02520024
+        IF (SUBSTR(W_BIRTHDATE_CHARS,I,1) < '0' |                       02530028
+               SUBSTR(W_BIRTHDATE_CHARS,I,1) > '9') THEN                02540028
+                                       W_NUMERIC_BIRTHDATE = 'N';       02550024
+      END;                                                              02560024
+      IF (W_NUMERIC_BIRTHDATE = 'Y') THEN DO;                           02570024
+         INPUT_DATE = W_INPUT_BIRTHDATE;                                02580024
+         L_INPUT_DATE = W_INPUT_BIRTHDATE;                              02590024
+         W_DATE_SW = 'A';                                               02600024
+         IF (W_INPUT_DATE_MM >= 01) & (W_INPUT_DATE_MM <= 12) THEN DO;  02600147
+             W_DAYS_IN_BIRTH_MONTH = W_DAYS_IN_MONTH(W_INPUT_DATE_MM);  02600247
+         END;                                                           02600347
+         ELSE DO;                                                       02600447
+             W_DAYS_IN_BIRTH_MONTH = 0;                                 02600547
+         END;                                                           02600647
+         IF (W_INPUT_DATE_MM = 02) THEN DO;                             02600747
+           IF (MOD(W_INPUT_DATE_CCYY,4) = 0) THEN DO;                   02600947
+               W_DAYS_IN_BIRTH_MONTH = 29;                              02601047
+           END;                                                         02601147
+           IF ((MOD(W_INPUT_DATE_CCYY,100) = 0) &                       02601247
+                      (MOD(W_INPUT_DATE_CCYY,400) ¬= 0)) THEN DO;        02601347
+               W_DAYS_IN_BIRTH_MONTH = 28;                              02601447
+           END;                                                         02601547
+         END;                                                           02601647
+         IF (W_INPUT_DATE_CCYY < 1582 | W_INPUT_DATE_DD < 01 |          02610047
+                      W_INPUT_DATE_DD > W_DAYS_IN_BIRTH_MONTH |         02611047
+                      W_INPUT_DATE_MM > 12 | W_INPUT_DATE_MM < 01 |     02620047
+                      W_BIRTHDATE_CHARS > DATETIME('YYYYMMDD')) THEN DO;02640047
+              MSGERRO = 'INPUT DATE INVALID IN YEAR/MONTH/DAY';         02650024
+              UNSPEC(MSGERRA) = '01100001'B;                            02660024
+              W_DATE_SW = 'X';                                          02670024
+         END;                                                           02680024
+      END;                                                              02690024
+      ELSE DO;                                                          02700024
+         MSGERRO =  'INPUT DATE NOT NUMERIC - PLEASE REENTER';          02710030
+         UNSPEC(MSGERRA) = '01100001'B;                                 02720024
+         EPBDAYI = 'YYYYMMDD';                                          02730024
+         W_DATE_SW = 'X';                                               02740024
+         W_SEND_FLAG = SEND_ERASE;                                      02750024
+      END;                                                              02760024
+   RETURN;                                                              02770024
+ END A500_VERIFY_INPUT_DATE;                                            02780024
+                                                                        02790024
+ A600_CALL_DAY_DIFFERENCE: PROC ;                                       02800024
+      W_CALL_PROGRAM = 'EPSBDP2';                                       02801030
+      W_DAY_DIFFERENCE = 0;                                             02802030
+      W_EPS02_PROGRAM_RETCODE = 0;                                      02803030
+                                                                        02804030
+      EXEC CICS LINK PROGRAM(W_CALL_PROGRAM)                            02806242
+               COMMAREA(INTERFACE_AREA) LENGTH(INTERFACE_AREA_LENGTH);  02806342
+                                                                        02807630
+      IF (W_EPS02_PROGRAM_RETCODE =  W_EPS02_REQUEST_SUCCESS) THEN DO;  02807730
+         W_DATE_INDICATOR = 'Y';                                        02808030
+         EPDIFF2O = L_DAY_DIFFERENCE;                                   02809030
+         W_DAY_DIFFERENCE = L_DAY_DIFFERENCE;                           02809130
+         UNSPEC(EPDIFF2A) = '11101000'B;                                02809230
+         EPBDFM2O = L_DATE_FORMATTED;                                   02809331
+         W_DATE_FORMATTED = L_DATE_FORMATTED;                           02809431
+         UNSPEC(EPBDFM2A) = '11101000'B;                                02809530
+      END;                                                              02809630
+      ELSE DO;                                                          02809730
+         MSGERRO = 'PROBLEMS IN CALL OF EPSBDP2';                       02809831
+         UNSPEC(MSGERRA) = '11001000'B;                                 02809930
+      END;                                                              02810030
+   RETURN;                                                              02811024
+ END A600_CALL_DAY_DIFFERENCE;                                          02820024
+                                                                        02830024
+ A600_CALCULATE_RETIREMENT: PROC;                                       02831027
+      W_RETIREMENT_DATE = ' ';                                          02831130
+      W_EPS03_PROGRAM_RETCODE = 0;                                      02831230
+      W_CALL_PROGRAM = 'EPSBDP3';                                       02831330
+                                                                        02831430
+   /************************************************/                   02831530
+   /*** START TEMP CODE WAITING FOR EPSBDP3   ******/                   02831630
+   /************************************************/                   02831730
+   /* CALL W_CALL_PROGRAM USING W_EPS03_LINKAGE_AREA  */                02831930
+      EXEC CICS LINK PROGRAM(W_CALL_PROGRAM)                            02832046
+                    COMMAREA(W_EPS03_LINKAGE_AREA)                      02832146
+                               LENGTH(W_EPS03_LINKAGE_AREA_LENGTH);     02832246
+                                                                        02832346
+                                                                        02832530
+   /************************************************/                   02832630
+   /***   END TEMP CODE WAITING FOR EPSBDP3   ******/                   02832730
+   /************************************************/                   02832830
+                                                                        02832930
+      IF (W_EPS03_PROGRAM_RETCODE = W_EPS03_REQUEST_SUCCESS) THEN DO;   02833030
+         EPRET2O = SUBSTR(W_RETIREMENT_DATE,1,LENGTH(EPRET2O));         02833133
+         W_CA_RETIREMENT_DATE = W_RETIREMENT_DATE;                      02833230
+         W_RETIREMENT_INDICATOR = 'Y';                                  02833330
+         UNSPEC(EPRET2A) = '11101000'B;                                 02833430
+      END;                                                              02833532
+      ELSE DO;                                                          02833632
+         MSGERRO = 'PROBLEMS IN CALCULATING RETIREMENT';                02833730
+         UNSPEC(MSGERRA) = '11001000'B;                                 02833830
+      END;                                                              02833932
+   RETURN;                                                              02834030
+ END A600_CALCULATE_RETIREMENT;                                         02834130
+                                                                        02835030
+ END EPSBDP1;                                                           02840000

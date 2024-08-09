@@ -1,0 +1,412 @@
+ PSAM1: PROC OPTIONS(MAIN);
+ /****************************************************************
+  * PROGRAM:  PSAM1
+  *
+  * AUTHOR :  Doug Stout
+  *           IBM PD TOOLS
+  *
+  * READS A FILE AND WRITES A REPORT
+  * PROCESSING IS CONTROLLED BY A TRANSACTION FILE
+  *
+  * THIS EXAMPLE APPLICATION IS A TEACHING AID.  INTENDED USES ARE:
+  *   FOR DEBUG TOOL WORKSHOP:
+  *      - DETERMINE WHY THE MAX VALUE IS INCORRECT IN THE REPORT
+  *      - INTERCEPT THE ABEND THAT CAN OCCUR IN SUBROUTINE PSAM2
+  *   FOR FAULT ANALYZER WORKSHOP:
+  *      - DETERMINE WHY THE PSAM2 PROGRAM ABENDS IN SOME CASES
+  *   FOR APPLICATION PERFORMANCE ANALYZER WORKSHOP:
+  *      - DETERMINE WHERE THE PROGRAM IS SPENDING THE MOST TIME
+  ****************************************************************
+  *
+  * Transaction file record descriptions:
+  *     0    1    1    2    2    3    3    4    4    5    5    6    6
+  * ....5....0....5....0....5....0....5....0....5....0....5....0....5
+  * *        <== an asterisk in first column is a comment
+  * PRINT    <== produces a detail report
+  * TOTALS   <== produces a summary report
+  * ABEND    <== force a divide by zero abend
+  *
+  ****************************************************************/
+
+   DCL DUMP_FINDER CHAR(30) INIT('*STORAGE FOR PROGRAM PSAM1****');
+
+   /**********************/
+   /* INPUT/OUTPUT FILES */
+   /**********************/
+
+   DCL CUSTFILE FILE INPUT RECORD SEQUENTIAL
+              ENV(FB RECSIZE(80) BLKSIZE(0));
+   DCL TRANFILE FILE INPUT RECORD SEQUENTIAL BUFFERED;
+   DCL CUSTRPT FILE STREAM PRINT;
+
+   /*************************************
+    * TRANFILE RECORD                   *
+    *************************************/
+    DCL 1 TRAN_RECORD,
+          2 TRAN_CODE          CHAR(6),
+          2 TRAN_FILL3         CHAR(1),
+          2 CRUNCH_PARMS,
+            3 CRUNCH_IO_LOOPS    PIC '99999',
+            3 CRUNCH_FILL1       CHAR(1),
+            3 CRUNCH_CPU_LOOPS   PIC '999999999',
+          2 CRUNCH_FILL2       CHAR(58);
+    DCL TRAN_COMMENT           CHAR(1)    DEFINED TRAN_RECORD;
+    DCL TRAN_RECORD_ALL        CHAR(80)   DEFINED TRAN_RECORD;
+
+   /***************************************
+    * CUSTFILE RECORDS                    *
+    ***************************************/
+
+   %INCLUDE DFHEIB;
+   /*   ---------------------------------------------------   *
+    *   DESCRIBES FILE <USERID>.ADLAB.FILES(CUST2)            *
+    *   ---------------------------------------------------   */
+   DCL 1 CUSTFILE_RECORD     CHAR(80);
+   DCL 1 CUSTOMER_RECORD  BASED(ADDR(CUSTFILE_RECORD)),
+         2 CUSTOMER_KEY,
+           3 CUST_ID          CHAR(5),
+           3 CUST_RECORD_TYPE CHAR(1),
+           3 KEY_FILL         CHAR(7),
+         2 CUST_NAME          CHAR(17),
+         2 ACCT_BALANCE       FIXED DEC (9,2) UNALIGNED,
+         2 ORDERS_YTD         FIXED BINARY(15,0) UNALIGNED,
+         2 CITY               CHAR(15),
+         2 OCCUPATION         CHAR(28);
+   DCL 1 PRODUCT_RECORD   BASED(ADDR(CUSTFILE_RECORD)),
+         2 PRODUCT_KEY,
+           3 PR_CUST_ID       CHAR(5),
+           3 PR_RECORD_TYPE   CHAR(1),
+           3 PRODUCT_ID       CHAR(7),
+         2 PRODUCT_NAME       CHAR(25),
+         2 DATE_PURCHASED     CHAR(10),
+         2 SERVICE_CALLS      FIXED BINARY(15,0) UNALIGNED,
+         2 LAST_SERVICE_CALL  CHAR(10),
+         2 RECORD_FILL        CHAR(20);
+
+   /********************
+    * PROGRAM FLAGS    *
+    ********************/
+
+   DCL  TRANFILE_EOF BIT(1) INIT ('0'B);
+   DCL  CUSTFILE_EOF BIT(1) INIT ('0'B);
+   DCL  TRAN_OK_FLAG BIT(1) INIT ('1'B);
+
+   /********************
+    * GENERAL DECLARES *
+    ********************/
+   DCL 1 SYSTEM_DATE_AND_TIME,
+         2 CURRENT_DATE,
+           3 CURRENT_YEAR            PIC '9999',
+           3 CURRENT_MONTH           PIC '99',
+           3 CURRENT_DAY             PIC '99',
+         2 CURRENT_TIME,
+           3 CURRENT_HOUR            PIC '99',
+           3 CURRENT_MINUTE          PIC '99',
+           3 CURRENT_SECOND          PIC '99',
+           3 CURRENT_MILLISEC        PIC '999';
+
+   DCL NUM_TRANFILE_RECS     BIN FIXED(15) INIT(0);
+   DCL NUM_TRAN_ERRORS       BIN FIXED(15) INIT(0);
+   DCL NUM_TRANSACTIONS      BIN FIXED(15) INIT(0);
+   DCL NUM_CUSTFILE_RECS     BIN FIXED(15) INIT(0);
+   DCL NUM_CUSTOMER_RECS     BIN FIXED(15) INIT(0);
+   DCL NUM_PRODUCT_RECS      BIN FIXED(15) INIT(0);
+   DCL NUM_DETAIL_LINES      BIN FIXED(15) INIT(0);
+   DCL NUM_PRINT_REQUESTS    BIN FIXED(15) INIT(0);
+   DCL NUM_PRINT_COMPLETED   BIN FIXED(15) INIT(0);
+   DCL NUM_TOTALS_REQUESTS   BIN FIXED(15) INIT(0);
+   DCL NUM_TOTALS_COMPLETED  BIN FIXED(15) INIT(0);
+   DCL NUM_ABEND_REQUESTS    BIN FIXED(15) INIT(0);
+   DCL NUM_ABEND_COMPLETED   BIN FIXED(15) INIT(0);
+   DCL NUM_CRUNCH_REQUESTS   BIN FIXED(15) INIT(0);
+   DCL NUM_CRUNCH_COMPLETED  BIN FIXED(15) INIT(0);
+
+   DCL PROGRAM_STATUS        CHAR(30);
+
+   DCL 1 CUSTOMER_BALANCE_STATS,
+         2 BALANCE_COUNT     DEC(8)    INIT(0),
+         2 BALANCE_TOTAL     DEC(12,2) INIT(0),
+         2 BALANCE_MIN       DEC(12,2) INIT(0),
+         2 BALANCE_MAX       DEC(12,2) INIT(0),
+         2 BALANCE_RANGE     DEC(12,2) INIT(0),
+         2 BALANCE_AVG       DEC(12,2) INIT(0),
+         2 BALANCE_FIRST_TIME_SW     PIC '9'  INIT(1);
+
+   DCL 1 PRODUCT_STATS,
+         2 RECORD_COUNT      DEC(8),
+         2 SERV_CALLS_TOTAL  DEC(12,2),
+         2 SERV_CALLS_MIN    DEC(12,2),
+         2 SERV_CALLS_MAX    DEC(12,2),
+         2 SERV_CALLS_RANGE  DEC(12,2),
+         2 SERV_CALLS_AVG    DEC(12,2),
+         2 PRODUCT_FIRST_TIME_SW     PIC '9'  INIT(1);
+
+   DCL PSAM2 EXTERNAL ENTRY;
+   DCL PSAM3 EXTERNAL ENTRY;
+
+   /************************************
+    * REPORT LINES, TEXT, AND FORMATS  *
+    ************************************/
+
+   DCL MSG_BAD_TRAN   CHAR(20) INIT('Transaction Error:  ');
+   DCL MSG_OPEN_ERROR CHAR(20) INIT('Error Opening File: ');
+   DCL MSG_ONFILE     CHAR(25) INIT('                DD Name: ');
+   DCL MSG_ONCODE     CHAR(25) INIT('    File Condition Code: ');
+   DCL MSG_ONCONDID   CHAR(25) INIT('           Condition ID: ');
+   DCL MSG_ONCONDCOND CHAR(25) INIT('         Condition Name: ');
+
+   DCL HDR1_TEXT1     CHAR(40)
+                      INIT('SAMPLE CUSTOMER FILE REPORT       DATE: ');
+   DCL HDR1_TEXT2     CHAR(20) INIT(' (mm/dd/yyyy) TIME: ');
+   DCL 1 HDR2,
+         2 HDR2A CHAR(40) UNALIGNED
+               INIT('ID    CUSTOMER NAME     OCCUPATION      '),
+         2 HDR2B CHAR(40) UNALIGNED
+               INIT('                 BALANCE ORDERS-YTD     ');
+   DCL 1 HDR3,
+         2 HDR3A CHAR(40) UNALIGNED
+               INIT('----- ----------------- ----------------'),
+         2 HDR3B CHAR(40) UNALIGNED
+               INIT('------------ ----------- ----------     ');
+
+   DCL MSG_TRANREC    CHAR(80);
+   DCL MSG_TRAN1      CHAR(12) INIT('TRANSACTION:');
+   DCL SPACE          CHAR(1)  INIT(' ');
+   DCL SLASH          CHAR(1)  INIT('/');
+   DCL COLON          CHAR(1)  INIT(':');
+
+   FMT_MSG1: FORMAT ( A(22),A(4),A(1),A(2),A(1),A(2),A(20) );
+   FMT_MSG2: FORMAT ( A(22),A(2),A(1),A(2),A(1),A(2) );
+   FMT_CUST1:FORMAT ( SKIP,A(5),X(1),A(17),X(1),A(28),X(2),
+                                P'ZZZ,ZZ9V.99',X(1),P'ZZ,ZZZ,ZZ9' );
+   FMT_TRAN1:FORMAT ( SKIP,X(1),A(12),X(2),A(80) );
+   FMT_ERR1: FORMAT ( SKIP(1),A(20),X(5),A(25),A(29) );
+
+   DCL NUMA_7V2        PIC 'ZZZ,ZZ9V.99';
+   DCL NUMB_7V2        PIC 'ZZZ,ZZ9V.99';
+   DCL NUMC_7V2        PIC 'ZZZ,ZZ9V.99';
+   DCL NUMA_11         PIC 'ZZZ,ZZZ,ZZ9';
+   DCL NUMB_11         PIC 'ZZZ,ZZZ,ZZ9';
+   DCL NUMC_11         PIC 'ZZZ,ZZZ,ZZ9';
+
+   /********************************
+    * CONDITION HANDLING ROUTINES  *
+    ********************************/
+
+   ON ENDFILE (CUSTFILE)
+     CUSTFILE_EOF = '1'B;
+
+   ON ENDFILE (TRANFILE)
+     TRANFILE_EOF = '1'B;
+
+   ON ENDPAGE (CUSTRPT)
+   BEGIN;
+     /*  PRINT REPORT HEADINGS  */
+     FMT_HDR1: FORMAT ( PAGE,A(40),A(2),A(1),A(2),A(1),A(4),A(20),
+                                A(2),A(1),A(2),A(1),A(2) );
+     PUT FILE(CUSTRPT)
+       EDIT(HDR1_TEXT1,
+            CURRENT_MONTH, SLASH, CURRENT_DAY, SLASH, CURRENT_YEAR,
+            HDR1_TEXT2,
+            CURRENT_HOUR, COLON, CURRENT_MINUTE, COLON, CURRENT_SECOND)
+           (R(FMT_HDR1));
+     IF ( TRAN_CODE = 'PRINT ' ) THEN
+       CALL PRTHDG1;
+   END;
+ /*
+   ON UNDEFINEDFILE (CUSTFILE)
+     CALL UDFILEM;
+
+   ON UNDEFINEDFILE (TRANFILE)
+     CALL UDFILEM;
+
+   ON UNDEFINEDFILE (CUSTRPT)
+     CALL UDFILEM;
+
+   ON ERROR
+    BEGIN;
+     ON ERROR SYSTEM;
+     CALL PLIDUMP;
+     PUT DATA;
+   END;
+
+ */
+   /*****************************************************
+    * MAIN PROGRAM ROUTINE                              *
+    *****************************************************/
+
+   PROGRAM_STATUS = 'PROGRAM STARTED';
+   STRING(SYSTEM_DATE_AND_TIME) = DATETIME();
+   PUT PAGE EDIT('PSAM1 Started  Date = ',
+                 CURRENT_YEAR, SLASH, CURRENT_MONTH, SLASH,
+                 CURRENT_DAY, '  (yyyy/mm/dd)') (R(FMT_MSG1));
+   PUT SKIP EDIT('               Time = ', CURRENT_HOUR, COLON,
+                 CURRENT_MINUTE, COLON, CURRENT_SECOND) (R(FMT_MSG2));
+
+   PROGRAM_STATUS = 'OPENING FILES  ';
+   OPEN FILE (TRANFILE);
+   OPEN FILE (CUSTRPT);
+
+   SIGNAL ENDPAGE(CUSTRPT);  /*  Print report Headings  */
+
+   /******************************************************
+    * MAIN PROGRAM LOOP TO PROCESS TRANSACTION RECORDS   *
+    ******************************************************/
+    DCL I PIC'9';
+
+    I = 1;
+   TRANFILE_LOOP: DO WHILE (I > 0);
+
+     PROGRAM_STATUS = 'READING TRAN RECORD';
+     READ FILE (TRANFILE) INTO (TRAN_RECORD);
+
+     IF ( TRANFILE_EOF ) THEN
+       LEAVE TRANFILE_LOOP;    /*  Exit loop at end of Tran file   */
+     IF ( TRAN_COMMENT = '*' ) THEN
+       GOTO NEXT_TRANFILE_LOOP;  /*  Skip Comment Records            */
+
+     NUM_TRANFILE_RECS   = NUM_TRANFILE_RECS + 1;
+     PROGRAM_STATUS = 'WRITING TRAN REPORT';
+     PUT FILE (CUSTRPT) SKIP (1) LIST ( SPACE );
+     PUT FILE (CUSTRPT) EDIT( MSG_TRAN1, TRAN_RECORD_ALL )
+                           (R(FMT_TRAN1));
+     PUT FILE (CUSTRPT) SKIP (1) LIST ( SPACE );
+     TRAN_OK_FLAG = '1'B;
+
+     SELECT ( TRAN_CODE );
+
+       WHEN ('PRINT ') DO;    /* PRINT TRANSACTION */
+         PROGRAM_STATUS = 'PRINTING CUSTOMER REPORT';
+         NUM_TRANSACTIONS = NUM_TRANSACTIONS + 1;
+         NUM_PRINT_REQUESTS = NUM_PRINT_REQUESTS + 1;
+         CALL PRTHDG1;
+         OPEN FILE (CUSTFILE);
+         CUSTFILE_LOOP: DO WHILE (I > 0);
+           READ FILE (CUSTFILE) INTO (CUSTFILE_RECORD);
+           IF ( CUSTFILE_EOF ) THEN
+             LEAVE CUSTFILE_LOOP;    /*  Exit loop at end of file */
+           NUM_CUSTFILE_RECS = NUM_CUSTFILE_RECS + 1;
+           /*  SUBROUTINE PSAM2 WILL COLLECT STATISTICS */
+           IF ( CUSTOMER_RECORD.CUST_RECORD_TYPE = 'C' )  THEN  DO;
+             NUM_CUSTOMER_RECS = NUM_CUSTOMER_RECS + 1;
+             CALL PSAM2 ( CUSTFILE_RECORD,
+                          CUSTOMER_BALANCE_STATS );
+          EXEC CICS LINK PROGRAM(PSAM2) COMMAREA (CUSTOMER_RECORD);
+           PUT FILE (CUSTRPT)
+               EDIT(CUSTOMER_RECORD.CUST_ID,
+                    CUSTOMER_RECORD.CUST_NAME,
+                    CUSTOMER_RECORD.OCCUPATION,
+                    CUSTOMER_RECORD.ACCT_BALANCE,
+                    CUSTOMER_RECORD.ORDERS_YTD) (R(FMT_CUST1));
+             NUM_DETAIL_LINES = NUM_DETAIL_LINES + 1;
+           END;    /*  IF RECORD_TYPE = 'C'  */
+           IF ( PRODUCT_RECORD.PR_RECORD_TYPE = 'P' )  THEN  DO;
+             NUM_PRODUCT_RECS = NUM_PRODUCT_RECS + 1;
+             CALL PSAM3 ( CUSTFILE_RECORD,
+                          PRODUCT_STATS );
+           END;    /*  IF RECORD_TYPE = 'P'  */
+         END CUSTFILE_LOOP;
+         NUM_PRINT_COMPLETED  = NUM_PRINT_COMPLETED + 1;
+         CLOSE FILE (CUSTFILE);
+       END;         /*  when tran_code = 'PRINT '         */
+       WHEN ('TOTALS') DO;    /* TOTALS TRANSACTION */
+         PROGRAM_STATUS = 'PRINTING TOTALS REPORT';
+         NUM_TRANSACTIONS    = NUM_TRANSACTIONS + 1;
+         NUM_TOTALS_REQUESTS = NUM_TOTALS_REQUESTS + 1;
+         CALL TRANTOT;
+         NUM_PRINT_COMPLETED = NUM_PRINT_COMPLETED + 1;
+       END;         /*  when tran_code = 'TOTALS'         */
+       WHEN ('ABEND ') DO;    /* ABEND TRANSACTION */
+         PROGRAM_STATUS = 'PROCESSING ABEND REQUEST';
+         NUM_TRANSACTIONS    = NUM_TRANSACTIONS + 1;
+         NUM_ABEND_REQUESTS  = NUM_ABEND_REQUESTS + 1;
+         CALL TRANABN;
+         NUM_ABEND_COMPLETED = NUM_ABEND_COMPLETED + 1;
+       END;         /*  when tran_code = 'TOTALS'         */
+       OTHERWISE       DO;    /* UNKNOWN TRANSACTION */
+         NUM_TRANSACTIONS    = NUM_TRANSACTIONS + 1;
+         PUT FILE (CUSTRPT) SKIP (1)
+            LIST ('Invalid Transaction Code: ', TRAN_CODE);
+         NUM_TRAN_ERRORS = NUM_TRAN_ERRORS + 1;
+       END;
+     END;         /*  SELECT TRAN_CODE                  */
+   NEXT_TRANFILE_LOOP:
+   END TRANFILE_LOOP;
+
+   TRANABN: PROCEDURE;
+     DCL RESULT     PIC'999';
+     DCL WORKNUM_A     PIC'999';
+     DCL WORKNUM_B   PIC'999';
+
+     RESULT = 999;
+     WORKNUM_A = 100;
+     WORKNUM_B = 0;
+     RESULT = WORKNUM_A / WORKNUM_B;    /* This could be a problem */
+     NUM_ABEND_COMPLETED = NUM_ABEND_COMPLETED + 1;
+     PUT FILE (CUSTRPT) SKIP (1) LIST ( SPACE );
+     PUT FILE (CUSTRPT) SKIP (1)
+               LIST (' ABEND TRANSACTION PROCESSED.');
+   END TRANABN;
+
+   TRANTOT: PROCEDURE;
+     FMT_TOT1: FORMAT ( SKIP,X(2),A(15),X(4),A(11),A(11),
+                             X(3),A(11),A(11),X(3),A(11),A(11) );
+     PUT FILE (CUSTRPT) SKIP (1) LIST ( SPACE );
+     PUT FILE (CUSTRPT) SKIP (1) LIST ('TOTALS REPORT');
+     PUT FILE (CUSTRPT) SKIP (1) LIST ((99)'-');
+     IF ( NUM_PRINT_COMPLETED > 0 ) THEN DO;
+       NUMA_7V2 = BALANCE_TOTAL;
+       NUMB_7V2 = BALANCE_MAX;
+       NUMC_7V2 = BALANCE_AVG;
+       PUT FILE (CUSTRPT)
+          EDIT ('Acct Balance:',
+          '     Total:', NUMA_7V2,
+          '       Max:', NUMB_7V2,
+          '   Average:', NUMC_7V2 )
+          (R(FMT_TOT1));
+       NUMA_11 = NUM_CUSTFILE_RECS;
+       NUMB_11 = NUM_CUSTOMER_RECS;
+       PUT FILE (CUSTRPT)
+          EDIT ('Record Counts:',
+          ' All Types:', NUMA_11,
+          ' Cust Recs:', NUMB_11 )
+          (R(FMT_TOT1));
+       NUMA_11 = NUM_TRANSACTIONS;
+       NUMB_11 = NUM_TRANSACTIONS - NUM_TRAN_ERRORS;
+       NUMC_11 = NUM_TRAN_ERRORS;
+       PUT FILE (CUSTRPT)
+          EDIT ('Transactions:',
+          '     Count:', NUMA_11,
+          ' Processed:', NUMB_11,
+          '    Errors:', NUMC_11 )
+          (R(FMT_TOT1));
+       NUM_TOTALS_COMPLETED = NUM_TOTALS_COMPLETED + 1;
+     END;     /*  if num_print_completed > 0   */
+     ELSE DO;
+       PUT FILE (CUSTRPT) SKIP (1)
+          LIST ('Cannot complete TOTALS Tran. ',
+                'A PRINT tran must be requested/processed first.');
+       NUM_TRAN_ERRORS = NUM_TRAN_ERRORS + 1;
+     END;
+   END TRANTOT;
+
+   PRTHDG1: PROCEDURE;
+     PUT FILE (CUSTRPT) SKIP (1) LIST (STRING(HDR2));
+     PUT FILE (CUSTRPT) SKIP (1) LIST (STRING(HDR3));
+   END PRTHDG1;
+
+   /*
+   UDFILEM: PROCEDURE;
+     PUT SKIP (1) LIST ( SPACE );
+     PUT EDIT(MSG_OPEN_ERROR, MSG_ONFILE, ONFILE()) (R(FMT_ERR1));
+     PUT EDIT(SPACE, MSG_ONCODE, ONCODE()) (R(FMT_ERR1));
+     PUT EDIT(SPACE, MSG_ONCONDID, ONCONDID()) (R(FMT_ERR1));
+     PUT EDIT(SPACE, MSG_ONCONDCOND, ONCONDCOND()) (R(FMT_ERR1));
+     SIGNAL ERROR;
+   END UDFILEM;
+   */
+
+   PROGRAM_STATUS = 'PROGRAM ENDING';
+
+ PROGRAM_END:
+ END PSAM1;

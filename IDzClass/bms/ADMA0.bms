@@ -1,0 +1,43 @@
+*********************************************************************** 00010000
+ADMA0    DFHMSD TYPE=&SYSPARM,MODE=INOUT,LANG=ASM,                 @P3CX00080003
+               STORAGE=AUTO,TIOAPFX=YES,                               X00090000
+               DSATTS=(COLOR,HILIGHT),MAPATTS=(COLOR,HILIGHT)           00091000
+*       MENU MAP.                                                       00100000
+ADMENU  DFHMDI SIZE=(24,80),CTRL=(PRINT,FREEKB)                         00110000
+        DFHMDF POS=(5,25),ATTRB=(ASKIP,BRT),LENGTH=39,                 X00120005
+               INITIAL='ADTOOLS BIRTHDAY/RETIREMENT EXAMPLE JMW'        00130005
+        DFHMDF POS=(8,15),ATTRB=(ASKIP,NORM),LENGTH=23,                X00140000
+               INITIAL='PLEASE ENTER BIRTHDATE:'                        00150000
+ADBDAY  DFHMDF POS=(8,39),ATTRB=(UNPROT,NORM,IC),LENGTH=8,             X00160000
+               INITIAL='YYYYMMDD'                                       00170000
+        DFHMDF POS=(8,48),ATTRB=(PROT,ASKIP)                            00180000
+ADBDAYM DFHMDF POS=(9,23),ATTRB=(PROT,DRK),LENGTH=38,                  X00190009
+               INITIAL='PLEASE RE-ENTER, DATE MUST BE YYYYMMDD'         00200000
+ADBDAYI DFHMDF POS=(10,23),ATTRB=(UNPROT,NORM,NUM,FSET),LENGTH=1,      X00210000
+               INITIAL='1'                                              00220000
+        DFHMDF POS=(10,25),ATTRB=(PROT,ASKIP),LENGTH=1                  00230000
+ADBDAYD DFHMDF POS=(10,27),ATTRB=(PROT,NORM),LENGTH=45,                X00240000
+               INITIAL='ENTER A 1 TO SEE YOUR BIRTHDAY'                 00250000
+ADBDAYR DFHMDF POS=(11,27),ATTRB=(PROT,NORM),LENGTH=45,                X00260000
+               INITIAL='ENTER A 2 TO CALCULATE YOUR RETIREMENT'         00270000
+ADBDFMT DFHMDF POS=(13,15),ATTRB=(PROT,DRK),LENGTH=45,                 X00280000
+               INITIAL='HERE IS YOUR BIRTHDATE AND NO DAYS FROM CURR'   00290000
+ADBDFM1 DFHMDF POS=(15,12),ATTRB=(PROT,DRK),LENGTH=24,                 X00290100
+               INITIAL='YOUR BIRTHDATE AND DAY: '                       00290200
+ADBDFM2 DFHMDF POS=(15,40),ATTRB=(PROT,DRK),LENGTH=29                   00291000
+ADDIFF1 DFHMDF POS=(17,12),ATTRB=(PROT,DRK),LENGTH=24,                 X00291100
+               INITIAL='HOW LONG AGO WAS THIS?: '                       00291200
+ADDIFF2 DFHMDF POS=(17,40),ATTRB=(PROT,DRK),LENGTH=12                   00291307
+ADDIFF3 DFHMDF POS=(17,53),ATTRB=(PROT,DRK),LENGTH=4,                  X00291407
+               INITIAL='DAYS'                                           00291500
+ADBRET  DFHMDF POS=(19,15),ATTRB=(PROT,DRK),LENGTH=27,                 X00292000
+               INITIAL='IF YOU WANT TO RETIRE AT 65 '                   00293000
+ADRET1  DFHMDF POS=(21,12),ATTRB=(PROT,DRK),LENGTH=26,                 X00293100
+               INITIAL='YOU WILL REACH AGE 65 ON: '                     00293200
+ADRET2  DFHMDF POS=(21,40),ATTRB=(PROT,DRK),LENGTH=35                   00293300
+MSGOUT  DFHMDF POS=(23,10),ATTRB=(PROT,ASKIP),LENGTH=35,               X00320006
+               INITIAL='CLEAR TO TERMINATE AND CLEAR SCREEN'            00330006
+MSGERR  DFHMDF POS=(24,10),ATTRB=(PROT,DRK),LENGTH=60,                 X00340004
+               INITIAL='INVALID KEY PRESSED'                            00350000
+        DFHMSD TYPE=FINAL                                               00360000
+        END                                                             00370000

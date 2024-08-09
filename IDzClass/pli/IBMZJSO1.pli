@@ -1,0 +1,644 @@
+*PROCESS OPTIONS INSOURCE SOURCE NEST MACRO STORAGE;
+*PROCESS AGGREGATE, OFFSET;
+*PROCESS LIST FLAG(I) MARGINS(2,72,1) MARGINI('|');
+*PROCESS OPT(2) TEST(ALL,SYM) ATTRIBUTES(FULL) XREF(SHORT);
+ /* PL/I Sample Program: Used to verify product installation          */
+ %SKIP(3);
+ /*=== SAMPLE ========================================================*/
+ /*                                                                   */
+ /* Licensed Materials - Property of IBM                              */
+ /* 5655-H31                                                          */
+ /* (C) Copyright IBM Corporation 1999, 2005 All rights reserved.     */
+ /*                                                                   */
+ /* US Government Users Restricted Rights - Use, duplication or       */
+ /* disclosure restricted by GSA ADP Schedule Contract with IBM Corp. */
+ /*                                                                   */
+ /*===================================================================*/
+ /*                                                                   */
+ /*       IBM Enterprise PL/I for z/OS                                */
+ /*       Version 3 Release 5 Modification 0                          */
+ /*                                                                   */
+ /*===================================================================*/
+ /*==                                                               ==*/
+ /*==  This is the PL/I sample program that is intended to be       ==*/
+ /*==  used to verify the product's complete installation.          ==*/
+ /*==  It is expected to execute and to provide some output.        ==*/
+ /*==  Although "results" are created by the program it is only     ==*/
+ /*==  to verify that representative I/O services are operable --   ==*/
+ /*==  the results are verified (internally) by the program.        ==*/
+ /*==                                                               ==*/
+ /*==  The program is intended to read a data file and count        ==*/
+ /*==  the number of occurrences of each PL/I statement type.       ==*/
+ /*==  The results are displayed at the end of execution.           ==*/
+ /*==  If any count does not match the value that is expected       ==*/
+ /*==  a warning message is displayed.                              ==*/
+ /*==                                                               ==*/
+ /*==  When the program is executed this source program file will   ==*/
+ /*==  be used as the input file.  The filename or DDNAME is        ==*/
+ /*==  SOURCE.                                                      ==*/
+ /*==                                                               ==*/
+ /*==  NOTE: Compilation of this program should cause preprocessor  ==*/
+ /*==        message:                                               ==*/
+ /*==                                                               ==*/
+ /*==   IBM3000I I  155.1 The WORD_TABLE was successfully declared. ==*/
+ /*==                                                               ==*/
+ /*==  and the following message at OPT(2):                         ==*/
+ /*==                                                               ==*/
+ /*==   IBM1064I I     4.1     Use of OPT(2) forces TEST(BLOCK).    ==*/
+ /*===================================================================*/
+ /*===================================================================*/
+ %SKIP(3);
+ SAMPLE: PROCEDURE OPTIONS(MAIN) REORDER;
+ %PAGE;
+   %/*---------------------------------------------------------------*/;
+   %/*   The services of the PL/I Preprocessor will be used by this  */;
+   %/* program.  Since some of its variables are global (their use   */;
+   %/* crosses macros) they must be defined early in the source      */;
+   %/* program.                                                      */;
+   %/*   Notice that these lines start with a percent sign and       */;
+   %/* end with a semicolon.  Notice also that they do not appear    */;
+   %/* on the program SOURCE listing.                                */;
+   %/*---------------------------------------------------------------*/;
+   %DCL BIG_LIST CHAR;
+   %BIG_LIST = '';
+   %;
+   %DCL SIZE_WORD_LIST FIXED;
+   %SIZE_WORD_LIST = 0;
+   %;
+   %DCL MAX_WORD_LENGTH FIXED;
+   %MAX_WORD_LENGTH = 0;
+   %;
+   %DCL CURRENT_POSITION FIXED;
+   %CURRENT_POSITION = 0;
+   %;
+   %DCL FIRST_WORD_INDICES CHAR;
+   %FIRST_WORD_INDICES = '';
+   %DCL LAST_INDEX         FIXED;
+   %LAST_INDEX = 0;
+   %;
+   %ACTIVATE ADD_TO_LIST, END_OF_LIST;
+   %/*---------------------------------------------------------------*/;
+   %/* End of the global Preprocessor variable declarations          */;
+   %/*---------------------------------------------------------------*/;
+   /*=================================================================*/
+   /* Non-Preprocessor data variables are declared here.  Only the    */
+   /* variables that are used in the main block (or in more than one  */
+   /* of the contained blocks) are defined here.                      */
+   /*=================================================================*/
+
+   /*-----------------------------------------------------------------*/
+   /* Declare the source program input file and its accoutrements.    */
+   /*-----------------------------------------------------------------*/
+   DECLARE SOURCE         FILE RECORD;
+   DECLARE RECORD         CHARACTER(121) VARYING;
+   DECLARE RECORD_READ    BIT(1) INIT(FALSE);
+   DECLARE LAST_CHAR_POSN FIXED BINARY(31);
+   DECLARE DISCREPANCY_OCCURRED  BIT(1) INIT(FALSE);
+
+   /*-----------------------------------------------------------------*/
+   /* Declare the left- and right-margins of the input dataset.       */
+   /*-----------------------------------------------------------------*/
+   DECLARE LEFT_MARGIN    FIXED BINARY(31) INIT('2');
+   DECLARE RIGHT_MARGIN   FIXED BINARY(31) INIT('72');
+
+   /*-----------------------------------------------------------------*/
+   /* Declare '1'B as TRUE and '0'B as FALSE.                         */
+   /*-----------------------------------------------------------------*/
+   DECLARE TRUE           BIT(1) static INIT('1'B);
+   DECLARE FALSE          BIT(1) static INIT('0'B);
+
+   /*-----------------------------------------------------------------*/
+   /* Declare which characters are acceptable as the first character  */
+   /* of a word -- then declare acceptable succeeding characters.     */
+   /*-----------------------------------------------------------------*/
+   DECLARE WORD_FIRST_CHARACTERS CHAR(29) STATIC
+                 INIT('ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$');
+   DECLARE WORD_NEXT_CHARACTERS  CHAR(30) STATIC
+                 INIT('ABCDEFGHIJKLMNOPQRSTUVWXYZ_@#$');
+
+   /*-----------------------------------------------------------------*/
+   /* Declare a place to hold words extracted from program text.      */
+   /*-----------------------------------------------------------------*/
+   DECLARE WORD  CHAR(31) VARYING;
+   DECLARE WORD_INDEX     FIXED BINARY(31);
+
+   /*-----------------------------------------------------------------*/
+   /* Declare the use of SYSPRINT and all of the builtin functions.   */
+   /*-----------------------------------------------------------------*/
+   DECLARE SYSPRINT       FILE STREAM,
+           PLIXOPT CHAR(100) VAR STATIC EXT INIT('MSGFILE(SYSPRINT)');
+   DECLARE (HIGH, SUBSTR, SUM, UNSPEC, VERIFY) BUILTIN;
+   DECLARE ONCODE         BUILTIN;
+1  /*=================================================================*/
+   /* PL/I statement keywords are collected using the ADD_TO_LIST     */
+   /* macro.  They are put into a table, WORD_TABLE, by the           */
+   /* END_OF_LIST macro.  That macro also creates an index,           */
+   /* WORD_TABLE_INDEX, into the WORD_TABLE.                          */
+   /*                                                                 */
+   /* Finally, a table, WORD_COUNT, is created that has a counter     */
+   /* that corresponds to each word.  Whenever that word is           */
+   /* encountered in the input stream the appropriate WORD_COUNT      */
+   /* element is incremented.                                         */
+   /*                                                                 */
+   /* Notice that there are no semicolons in the macro statements.    */
+   /*=================================================================*/
+   ADD_TO_LIST ('ALLOCATE,BEGIN')
+   ADD_TO_LIST ('CALL,CLOSE,DCL,DECLARE,DEFAULT,DISPLAY')
+   ADD_TO_LIST ('DO')
+   ADD_TO_LIST ('ELSE,END,ENTRY,FREE,GENERIC,GET,GO,GOTO,IF')
+   ADD_TO_LIST ('LEAVE,LIST,LOCATE,ON,OPEN')
+   ADD_TO_LIST ('PROC,PROCEDURE')
+   ADD_TO_LIST ('READ,RETURN,REVERT,REWRITE,SELECT,SIGNAL')
+   ADD_TO_LIST ('STOP,THEN,WAIT,WHEN,WRITE')
+   END_OF_LIST
+
+   /*-----------------------------------------------------------------*/
+   /* This is the table containing the results when THIS program      */
+   /* is the input dataset.  There is an intentional error on the     */
+   /* IF count so that an error message can be produced.              */
+   /*-----------------------------------------------------------------*/
+   DECLARE CONTROLLED_SET(SIZE_WORD_LIST) FIXED BINARY(15)
+                              INIT( 0, 3,
+                                    0, 1, 13, 24, 0, 2,
+                                    14,
+                                    13, 23, 0, 0, 0, 0, 1, 0, 13,
+                                    0, 7, 0, 4, 1,
+                                    2, 3,
+                                    2, 4, 0, 0, 1, 0,
+                                    2, 13, 0, 2, 0);
+ %PAGE;
+   /*=================================================================*/
+   /*= SAMPLE will perform the following tasks:                      =*/
+   /*= 1) OPEN the input dataset                                     =*/
+   /*= 2) READ each record and, for each record,                     =*/
+   /*=    a) Extract a character string that meets the PL/I          =*/
+   /*=       definition of a word.                                   =*/
+   /*=    b) If the word also appears in the list of interesting     =*/
+   /*=       words, record its presence by incrementing a counter.   =*/
+   /*= 3) Report on the number of appearances of the words that      =*/
+   /*=    actually appeared in the dataset.                          =*/
+   /*= 4) DISPLAY a message if the count does not match the count    =*/
+   /*=    of PL/I statement keywords in this program.                =*/
+   /*=================================================================*/
+
+   /*-----------------------------------------------------------------*/
+   /* Describe the action to take on selected exceptional conditions. */
+   /*-----------------------------------------------------------------*/
+
+   /*-----------------------------------------------------------------*/
+   /* If the file has not been properly defined, tell them about it.  */
+   /*-----------------------------------------------------------------*/
+   ON UNDEFINEDFILE(SOURCE)
+     BEGIN;
+       DISPLAY ('The input data set has not been defined.');
+       STOP;
+     END;
+
+   /*-----------------------------------------------------------------*/
+   /* When the file has been processed indicate "no record read".     */
+   /*-----------------------------------------------------------------*/
+   ON ENDFILE(SOURCE)
+     BEGIN;
+       RECORD_READ = FALSE;
+     END;
+
+   /*-----------------------------------------------------------------*/
+   /* If any other errors occur, write a message and terminate.       */
+   /*-----------------------------------------------------------------*/
+   ON ERROR
+     BEGIN;
+       ON ERROR SYSTEM;
+       DISPLAY ('Unspecified error occurred.  ONCODE=' || ONCODE );
+       STOP;
+     END;
+
+   /*-----------------------------------------------------------------*/
+   /* Prepare the input dataset for processing -- mark it as open.    */
+   /*-----------------------------------------------------------------*/
+   OPEN FILE(SOURCE) INPUT;
+1  /*=================================================================*/
+   /* Count the use of PL/I statements in each record of the          */
+   /* input data set.                                                 */
+   /*=================================================================*/
+
+   /*-----------------------------------------------------------------*/
+   /* Read the first record of the input dataset.                     */
+   /*-----------------------------------------------------------------*/
+   RECORD_READ = TRUE;
+   READ FILE(SOURCE) INTO (RECORD);
+
+   /*-----------------------------------------------------------------*/
+   /* Process the first and all succeeding records.                   */
+   /*-----------------------------------------------------------------*/
+   DO WHILE (RECORD_READ);
+
+     /* Set the "last character" position to the left margin          */
+     LAST_CHAR_POSN = LEFT_MARGIN;
+     /* Use NEXT_WORD to extract the first word from this record.     */
+     WORD = NEXT_WORD(RECORD);
+
+     /*---------------------------------------------------------------*/
+     /* Extract words from this record until no more remain.          */
+     /*---------------------------------------------------------------*/
+     DO WHILE (WORD ¬= '');
+       /* Use LOOKUP_WORD to find its position in the table.          */
+       WORD_INDEX = LOOKUP_WORD(WORD);
+
+       /*-------------------------------------------------------------*/
+       /* If the word is in the list, count it.                       */
+       /*-------------------------------------------------------------*/
+       IF WORD_INDEX ¬= 0 THEN
+         WORD_COUNT(WORD_INDEX) = WORD_COUNT(WORD_INDEX) + 1;
+       ELSE;
+       /* Get the next word from the record.                          */
+       WORD = NEXT_WORD(RECORD);
+     END;
+
+     /*---------------------------------------------------------------*/
+     /* Read the next record from the input data set.                 */
+     /*---------------------------------------------------------------*/
+     record = repeat( ' ', length(record)-1 );
+     READ FILE(SOURCE) INTO (RECORD);
+   END;
+
+   /*-----------------------------------------------------------------*/
+   /* Input from the data set is exhausted. CLOSE it.                 */
+   /*-----------------------------------------------------------------*/
+   CLOSE FILE(SOURCE);
+ %PAGE;
+   /*=================================================================*/
+   /*= The report that details and summarizes the use of word in the =*/
+   /*= WORD_TABLE is prepared in this section.                       =*/
+   /*=================================================================*/
+
+   PUT SKIP LIST (' *********************** ');
+   PUT SKIP LIST (' *** Word-use Report *** ');
+   PUT SKIP LIST (' *********************** ');
+   PUT SKIP LIST (' -count-   --word-- ');
+
+   /*-----------------------------------------------------------------*/
+   /* Review the activity for each word in the list.                  */
+   /*-----------------------------------------------------------------*/
+   DO WORD_INDEX = 1 TO SIZE_WORD_LIST;
+
+     /*---------------------------------------------------------------*/
+     /* If the word was used then display the word and its use-count. */
+     /*---------------------------------------------------------------*/
+     IF WORD_COUNT(WORD_INDEX) > 0 THEN
+       PUT SKIP EDIT (WORD_COUNT(WORD_INDEX),
+                      WORD_TABLE(WORD_INDEX))
+                      (F(6), X(6),A);
+     ELSE;
+
+     /*---------------------------------------------------------------*/
+     /* If there was a discrepancy between what was counted and what  */
+     /* was expected then display a warning message and remember that */
+     /* it had occurred.                                              */
+     /*---------------------------------------------------------------*/
+     IF WORD_COUNT(WORD_INDEX) ¬= CONTROLLED_SET(WORD_INDEX) THEN
+       DO;
+         PUT SKIP EDIT ((12)'-',
+                        'The previous value should have been',
+                        CONTROLLED_SET(WORD_INDEX))
+                        (A, A, F(6));
+         DISCREPANCY_OCCURRED = TRUE;
+       END;
+     ELSE;
+   END;
+
+1  /*=================================================================*/
+   /* Summarize word activity on this input dataset.                  */
+   /*=================================================================*/
+
+   PUT SKIP(2) LIST ('There were ' || SUM(WORD_COUNT)
+                  || ' references to ' || SIZE_WORD_LIST
+                  || ' words.');
+
+   /*-----------------------------------------------------------------*/
+   /* If a discrepency between one of the counts and the expected     */
+   /* counts occured then display a warning message.                  */
+   /*-----------------------------------------------------------------*/
+   IF DISCREPANCY_OCCURRED THEN
+     PUT SKIP(2) LIST ('There was a discrepancy in at least one of'
+                  || ' the word-counts.');
+   ELSE;
+1  /*=== NEXT_WORD ===================================================*/
+   /*=================================================================*/
+   /*==                                                             ==*/
+   /*==  Extract a word from the argument string that is passed.    ==*/
+   /*==  Return it as CHAR(31) VARYING.                             ==*/
+   /*==                                                             ==*/
+   /*==  Ignore PL/I comments and constants (strings surrounded by  ==*/
+   /*==  single quotes (').  Comments and constants can not be      ==*/
+   /*==  continued but must be complete in the argument string.     ==*/
+   /*==                                                             ==*/
+   /*==  If no more words exist then a null character string will   ==*/
+   /*==  be returned.                                               ==*/
+   /*==                                                             ==*/
+   /*=================================================================*/
+   /*=================================================================*/
+
+   NEXT_WORD: PROCEDURE(DATA_RECORD) RETURNS(CHAR(31) VARYING);
+
+     DECLARE DATA_RECORD        CHAR(*)  VARYING;
+     DECLARE DATA_WORD          CHAR(31) VARYING;
+     DECLARE NEXT_CHARACTER     CHAR(1);
+     DECLARE LENGTH_OF_STRING   FIXED BINARY(31);
+
+     DECLARE NEXT_CHAR_POSN     FIXED BINARY(31);
+
+     /*===============================================================*/
+     /*= LAST_CHAR_POSN remembers, from call to call, the point where=*/
+     /*= the search for additional words will start.  Management of  =*/
+     /*= its value is a key concern to this function.                =*/
+     /*=                                                             =*/
+     /*= Comments and constants in the argument string will be       =*/
+     /*= ignored.  If a character is found that is a legitimate PL/I =*/
+     /*= "first-character" then a word is assumed to follow.  It     =*/
+     /*= will be built by concatenating (suffixing) additional,      =*/
+     /*= legitimate "next-characters".                               =*/
+     /*===============================================================*/
+1    /*===============================================================*/
+     /*= Scan each character in the record.  Start at the position   =*/
+     /*= where scanning last terminated (LAST_CHAR_POSN) and         =*/
+     /*= continue until the end of a word or the end of the record   =*/
+     /*= is reached.                                                 =*/
+     /*===============================================================*/
+
+     DATA_WORD = '';
+     DO NEXT_CHAR_POSN = LAST_CHAR_POSN TO RIGHT_MARGIN
+      WHILE (DATA_WORD = '');
+       NEXT_CHARACTER = SUBSTR(DATA_RECORD, NEXT_CHAR_POSN, 1);
+       SELECT (NEXT_CHARACTER);
+
+         WHEN ('/')
+
+           /*---------------------------------------------------------*/
+           /* If this turns out to be a comment then skip over it.    */
+           /*---------------------------------------------------------*/
+           DO;
+             IF SUBSTR(DATA_RECORD, NEXT_CHAR_POSN, 2) = '/*' THEN
+               NEXT_CHAR_POSN = NEXT_CHAR_POSN + 3
+                    + INDEX(SUBSTR(DATA_RECORD,NEXT_CHAR_POSN+2),'*/');
+             ELSE;
+           END;
+
+         WHEN ('''')
+
+           /*---------------------------------------------------------*/
+           /* Skip over the constant.                                 */
+           /*---------------------------------------------------------*/
+           NEXT_CHAR_POSN = NEXT_CHAR_POSN
+                     + INDEX(SUBSTR(DATA_RECORD,NEXT_CHAR_POSN+1),'''');
+         /*===========================================================*/
+         /*= This may be the start of a word.  Extract it if so.     =*/
+         /*===========================================================*/
+
+         OTHERWISE
+
+           /*---------------------------------------------------------*/
+           /* This may be the start of a word.                        */
+           /*---------------------------------------------------------*/
+           DO;
+
+             /*-------------------------------------------------------*/
+             /* If the next character is not acceptable as the first  */
+             /* character of a word then do nothing further -- our    */
+             /* enclosing DO will step to the next character for      */
+             /* further checking.                                     */
+             /*-------------------------------------------------------*/
+             IF INDEX(WORD_FIRST_CHARACTERS, NEXT_CHARACTER) = 0 THEN;
+             ELSE
+
+               /*-----------------------------------------------------*/
+               /* This is the start of a word.  Collect the rest of it*/
+               /*-----------------------------------------------------*/
+
+               DO;
+                 DATA_WORD = NEXT_CHARACTER;
+
+                 /*---------------------------------------------------*/
+                 /* Build up DATA_WORD by iteratively appending       */
+                 /* characters from the input argument string.  Do it */
+                 /* as long as the characters are acceptable PL/I     */
+                 /* "next=characters".                                */
+                 /*---------------------------------------------------*/
+
+                 DO NEXT_CHAR_POSN = NEXT_CHAR_POSN+1 TO RIGHT_MARGIN
+                  WHILE (INDEX(WORD_NEXT_CHARACTERS,
+                          SUBSTR(DATA_RECORD, NEXT_CHAR_POSN,1)) ¬= 0);
+                   DATA_WORD = DATA_WORD
+                               || SUBSTR(DATA_RECORD, NEXT_CHAR_POSN,1);
+                 END;
+                 LAST_CHAR_POSN = NEXT_CHAR_POSN + 1;
+               END;
+           END;
+       END;   /* End of the SELECT (NEXT_CHARACTER) statement         */
+     END;     /* End of the DO that tries to find a word              */
+
+     RETURN (DATA_WORD);
+   END;
+1  /*=== LOOKUP_WORD =================================================*/
+   /*=================================================================*/
+   /*==                                                             ==*/
+   /*==  Find the word in the WORD_TABLE that matches the           ==*/
+   /*==  argument string (CHAR(*) VARYING) and return the           ==*/
+   /*==  position of that word (its subscript) to the               ==*/
+   /*==  invoker (FIXED BINARY(15)).                                ==*/
+   /*==                                                             ==*/
+   /*==  If the word does not exist in the list a 0 will be         ==*/
+   /*==  returned.                                                  ==*/
+   /*==                                                             ==*/
+   /*=================================================================*/
+   /*=================================================================*/
+
+   LOOKUP_WORD: PROCEDURE(DATA_WORD) RETURNS(FIXED BINARY(31));
+
+     DECLARE DATA_WORD   CHAR(*) VARYING;
+     DECLARE WORD_NUMBER FIXED BINARY(31);
+
+     /*===============================================================*/
+     /*= A sequential search is used to locate the required word.    =*/
+     /*= WORD_INDEX_TABLE is used to start the search at the first   =*/
+     /*= word in the list that has the same first character.         =*/
+     /*===============================================================*/
+     WORD_NUMBER = WORD_INDEX_TABLE   /* Subscript is on next line */
+                 (INDEX (WORD_FIRST_CHARACTERS, SUBSTR(DATA_WORD,1,1)));
+
+     /*---------------------------------------------------------------*/
+     /* Search words in the WORD_TABLE until the word is found or is  */
+     /* determined to be not a part of the list -- its index number   */
+     /* (WORD_NUMBER) is zero.                                        */
+     /*---------------------------------------------------------------*/
+     DO WORD_NUMBER = WORD_NUMBER BY 1
+        UNTIL (  WORD_TABLE(WORD_NUMBER) = DATA_WORD
+               | WORD_NUMBER = 0);
+
+       /*-------------------------------------------------------------*/
+       /* If the word in the WORD_TABLE is alphabetically greater     */
+       /* than the argument word then a match cannot be found.  Set   */
+       /* the WORD_NUMBER to 0 to indicate a non=match situation.     */
+       /*-------------------------------------------------------------*/
+       IF WORD_TABLE(WORD_NUMBER) > DATA_WORD THEN
+         WORD_NUMBER = 0;
+       ELSE;
+     END;
+
+     RETURN (WORD_NUMBER);
+   END;
+   %;
+   %/*===============================================================*/;
+   %/*===============================================================*/;
+   %/*=                                                             =*/;
+   %/*= Submit a list of words that are to be included in the       =*/;
+   %/*= WORD_TABLE.  They must be in alphabetic order.  The list    =*/;
+   %/*= must be within parentheses and cannot contain any blanks    =*/;
+   %/*=                                                             =*/;
+   %/*===============================================================*/;
+   %/*===============================================================*/;
+   %ADD_TO_LIST: PROC(WORD_LIST) RETURNS(CHAR);
+     DCL WORD_LIST       CHAR;
+     DCL EXTRACTED_WORD  CHAR;
+     DCL THIS_INDEX_CHAR CHAR;
+     DCL THIS_INDEX      FIXED;
+     DCL COMMA           FIXED;
+     DCL (INDEX, LENGTH, SUBSTR) BUILTIN;
+
+     /* Remove the leading and trailing apostrophes                   */
+     WORD_LIST = SUBSTR(WORD_LIST,2,LENGTH(WORD_LIST)-2);
+
+     /*---------------------------------------------------------------*/
+     /* Extract each word from the argument data string.  Put each    */
+     /* word onto the end of a growing string that will eventually    */
+     /* be used in the INITIAL clause of the declaration of           */
+     /* the WORD_TABLE.                                               */
+     /*---------------------------------------------------------------*/
+   PARSE_LOOP:
+     /* Keep track of the size of the word list.                      */
+     SIZE_WORD_LIST = SIZE_WORD_LIST + 1;
+     THIS_INDEX = INDEX('ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                         SUBSTR(WORD_LIST,1,1));
+
+     /*---------------------------------------------------------------*/
+     /* Is this is the first time that this initial character has     */
+     /* been encountered?  If so, the table of indices into           */
+     /* WORD_TABLE must be updated.                                   */
+     /*---------------------------------------------------------------*/
+     IF THIS_INDEX ¬= LAST_INDEX THEN
+       DO;
+
+         /*-----------------------------------------------------------*/
+         /* Update the "initial character index" for all characters   */
+         /* between the last one and this one.                        */
+         /*-----------------------------------------------------------*/
+
+         DO LAST_INDEX = LAST_INDEX+1 TO THIS_INDEX;
+           /*---------------------------------------------------------*/
+           /* If the last character processed and this character are  */
+           /* are not alphabetically adjacent then a zero (no word    */
+           /* having such a first character is acceptable) must be    */
+           /* appended to the list of indices.  The list will be      */
+           /* used later in the INITIAL clause of the declaration     */
+           /* of WORD_TABLE_INDEX.                                    */
+           /*---------------------------------------------------------*/
+           IF LAST_INDEX < THIS_INDEX THEN
+             FIRST_WORD_INDICES = FIRST_WORD_INDICES || ', 0';
+           ELSE
+           FIRST_WORD_INDICES = FIRST_WORD_INDICES||','||SIZE_WORD_LIST;
+         END;
+         LAST_INDEX = LAST_INDEX - 1;
+       END;
+     ELSE;
+
+     COMMA = INDEX(WORD_LIST,',');
+
+     /*---------------------------------------------------------------*/
+     /* Is there a comma after this word?                             */
+     /*---------------------------------------------------------------*/
+     IF COMMA = 0 THEN
+       DO;
+
+         /*-----------------------------------------------------------*/
+         /* Since this word is not followed by a comma it is the      */
+         /* last one in the list.                                     */
+         /*-----------------------------------------------------------*/
+         BIG_LIST = BIG_LIST || '''' || WORD_LIST || ''', ';
+
+         /*-----------------------------------------------------------*/
+         /* Keep track of the longest word in the list.               */
+         /*-----------------------------------------------------------*/
+         IF LENGTH(WORD_LIST) > MAX_WORD_LENGTH THEN
+           MAX_WORD_LENGTH = LENGTH(WORD_LIST);
+         ELSE;
+         RETURN('');
+       END;
+     ELSE
+       DO;
+
+         /*-----------------------------------------------------------*/
+         /* Extract the next word and remove it from the input.       */
+         /*-----------------------------------------------------------*/
+         EXTRACTED_WORD = SUBSTR(WORD_LIST,1,COMMA-1);
+         BIG_LIST = BIG_LIST || ''''
+                             || EXTRACTED_WORD || ''', ';
+
+         /*-----------------------------------------------------------*/
+         /* Keep track of the longest word in the list.               */
+         /*-----------------------------------------------------------*/
+         IF LENGTH(EXTRACTED_WORD) > MAX_WORD_LENGTH THEN
+           MAX_WORD_LENGTH = LENGTH(EXTRACTED_WORD);
+         ELSE;
+         /* Remove this word and the comma from the input string.     */
+         WORD_LIST = SUBSTR(WORD_LIST,COMMA+1);
+       END;
+     GO TO PARSE_LOOP;
+   %END;
+   %;
+   %/*===============================================================*/;
+   %/*===============================================================*/;
+   %/*=                                                             =*/;
+   %/*= All words contained in the search list have been submitted. =*/;
+   %/*= Create the DECLAREs for the WORD_TABLE, WORD_COUNT vector   =*/;
+   %/*= and the WORD_INDEX_TABLE.                                   =*/;
+   %/*=                                                             =*/;
+   %/*===============================================================*/;
+   %/*===============================================================*/;
+   %END_OF_LIST: PROC RETURNS(CHAR);
+     DCL TABLE_DCL CHAR;
+
+     /*---------------------------------------------------------------*/
+     /* Create the DECLARE for the WORD_TABLE                         */
+     /*---------------------------------------------------------------*/
+     TABLE_DCL = 'DECLARE '
+                   || 'WORD_TABLE(' || (SIZE_WORD_LIST+1) || ') '
+                   || 'CHAR(' || MAX_WORD_LENGTH || ')'
+                   || 'INIT(' || BIG_LIST
+                              || 'HIGH(' || MAX_WORD_LENGTH || '));' ;
+
+     /*---------------------------------------------------------------*/
+     /* Append the DECLARE for the WORD_COUNT array.                  */
+     /*---------------------------------------------------------------*/
+     TABLE_DCL = TABLE_DCL
+              || 'DECLARE WORD_COUNT(' || SIZE_WORD_LIST || ') '
+              || 'FIXED BINARY(31) INIT((' || SIZE_WORD_LIST || ')0);' ;
+
+     /*---------------------------------------------------------------*/
+     /* Append the DECLARE for the WORD_INDEX_TABLE array.            */
+     /*---------------------------------------------------------------*/
+     TABLE_DCL = TABLE_DCL
+              || 'DECLARE WORD_INDEX_TABLE(26) FIXED BINARY(31) INIT(' ;
+     TABLE_DCL = TABLE_DCL || SUBSTR(FIRST_WORD_INDICES,5);
+
+     /*---------------------------------------------------------------*/
+     /* If the last word started with a Z then the initial values     */
+     /* for the index table is complete.  If not then some zeroes     */
+     /* have to be added to account for all 26 array items.           */
+     /*---------------------------------------------------------------*/
+     IF SIZE_WORD_LIST = 26 THEN
+       TABLE_DCL = TABLE_DCL || ')' ;
+     ELSE
+       TABLE_DCL = TABLE_DCL || ',(' || 26-LAST_INDEX || ')0);';
+     NOTE ('The WORD_TABLE was successfully declared.',0);
+     RETURN(TABLE_DCL);
+   %END;
+ END;

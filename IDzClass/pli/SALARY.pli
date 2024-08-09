@@ -1,0 +1,185 @@
+//* A sample program which updates the salaries for those employees   */
+//* whose current commission total is greater than or equal to the    */
+//* value of COMMISSION. The salaries of those who qualify are        */
+//* increased by the value of PERCENTAGE, retroactive to RAISE_DATE.  */
+ /* A report is generated showing the projects which these employees  */
+ /* have contributed to, ordered by project number and employee ID.   */
+ /* A second report shows each project having an end date occurring   */
+ /* after RAISE_DATE (i.e. is potentially affected by the retroactive */
+ /* raises) with its total salary expenses and a count of employees   */
+ /* who contributed to the project.                                   */
+ /*********************************************************************/
+
+
+ PLIEX: PROC;
+
+   DCL RAISE_DATE CHAR(10);
+   DCL WORK_DAYS  FIXED BIN(15);
+   DCL COMMISSION FIXED DECIMAL(8,2);
+   DCL PERCENTAGE FIXED DECIMAL(5,2);
+
+   /* File declaration for sysprint */
+   DCL SYSPRINT FILE EXTERNAL OUTPUT STREAM PRINT;
+
+   /* Structure for report 1 */
+   DCL 1 RPT1,
+         15 EMPNO     CHAR(6),
+         15 NAME      CHAR(30),
+         15 SALARY    FIXED DECIMAL(8,2);
+
+   /* Structure for report 2 */
+   DCL 1 RPT2,
+         15 PROJNO          CHAR(6),
+         15 PROJECT_NAME    CHAR(36),
+         15 EMPLOYEE_COUNT  FIXED BIN(15),
+         15 TOTL_PROJ_COST  FIXED DECIMAL(10,2);
+
+
+ DCL 1 SQLCAP,
+      2 SQLCAPID      CHAR(8),
+      2 SQLCAPBC      BIN FIXED(31),
+      2 SQLCODE      BIN FIXED(31),
+      2 SQLERRP      CHAR(8),
+      2 SQLERRD(6)   BIN FIXED(31),
+      2 SQLWARN,
+        3 SQLWARN0   CHAR(1),
+        3 SQLWARN1   CHAR(1),
+        3 SQLWARN2   CHAR(1),
+        3 SQLWARN3   CHAR(1),
+        3 SQLWARN4   CHAR(1),
+        3 SQLWARN5   CHAR(1),
+        3 SQLWARN6   CHAR(1),
+        3 SQLWARN7   CHAR(1),
+        3 SQLWARN8   CHAR(1),
+        3 SQLWARN9   CHAR(1),
+        3 SQLWARNA   CHAR(1),
+      2 SQLSTATE     CHAR(5);
+
+   COMMISSION = 2000.00;
+   PERCENTAGE = 1.04;
+   RAISE_DATE = '1982-06-01';
+   WORK_DAYS  = 253;
+   OPEN FILE(SYSPRINT);
+
+   /* Update the selected employee's salaries by the new percentage. */
+   /* If an error occurs during the update, ROLLBACK the changes.    */
+ EXEC SQL WHENEVER SQLERROR GO TO UPDATE_ERROR;
+ EXEC SQL
+        UPDATE CORPDATA/EMPLOYEE
+           SET SALARY = SALARY * :PERCENTAGE
+           WHERE COMM >= :COMMISSION ;
+
+   /* Commit changes */
+ EXEC SQL
+        COMMIT;
+   EXEC SQL WHENEVER SQLERROR GO TO REPORT_ERROR;
+
+
+   /* Report the updated statistics for each project supported by one */
+   /* of the selected employees.                                      */
+
+   /* Write out the header for Report 1 */
+   put file(sysprint)
+       edit('REPORT OF PROJECTS AFFECTED BY EMPLOYEE RAISES')
+           (col(22),a);
+   put file(sysprint)
+       edit('PROJECT','EMPID','EMPLOYEE NAME','SALARY')
+           (skip(2),col(1),a,col(10),a,col(20),a,col(55),a);
+
+ exec sql
+        declare c1 cursor for
+          select DISTINCT projno, EMPPROJACT.empno,
+                         lastname||', '||firstnme, salary
+          from CORPDATA/EMPPROJACT, CORPDATA/EMPLOYEE
+          where EMPPROJACT.empno = EMPLOYEE.empno and
+                comm >= :COMMISSION
+          order by projno, empno;
+ EXEC SQL
+        OPEN C1;
+
+   /* Fetch and write the rows to SYSPRINT */
+ EXEC SQL WHENEVER NOT FOUND GO TO DONE1;
+
+   DO UNTIL (SQLCODE ¬= 0);
+ EXEC SQL
+          FETCH C1 INTO :RPT2.PROJNO, :rpt1.EMPNO, :RPT1.NAME,
+                        :RPT1.SALARY;
+     PUT FILE(SYSPRINT)
+         EDIT(RPT2.PROJNO,RPT1.EMPNO,RPT1.NAME,RPT1.SALARY)
+             (SKIP,COL(1),A,COL(10),A,COL(20),A,COL(54),F(8,2));
+   END;
+
+ DONE1:
+ EXEC SQL
+        CLOSE C1;
+
+   /* For all projects ending at a date later than 'raise_date'       */
+   /* (i.e. those projects potentially affected by the salary raises) */
+   /* generate a report containing the project number, project name   */
+   /* the count of employees participating in the project and the     */
+   /* total salary cost of the project.                               */
+
+   /* Write out the header for Report 2 */
+   PUT FILE(SYSPRINT) EDIT('ACCUMULATED STATISTICS BY PROJECT')
+                          (SKIP(3),COL(22),A);
+   PUT FILE(SYSPRINT)
+       EDIT('PROJECT','NUMBER OF','TOTAL')
+           (SKIP(2),COL(1),A,COL(48),A,COL(63),A);
+   PUT FILE(SYSPRINT)
+       EDIT('NUMBER','PROJECT NAME','EMPLOYEES','COST')
+           (SKIP,COL(1),A,COL(10),A,COL(48),A,COL(63),A,SKIP);
+
+
+ EXEC SQL
+        DECLARE C2 CURSOR FOR
+          SELECT EMPPROJACT.PROJNO, PROJNAME, COUNT(*),
+             SUM( (DAYS(EMENDATE) - DAYS(EMSTDATE)) * EMPTIME *
+                  DECIMAL(( SALARY / :WORK_DAYS ),8,2) )
+          FROM CORPDATA/EMPPROJACT, CORPDATA/PROJECT, CORPDATA/EMPLOYEE
+          WHERE EMPPROJACT.PROJNO=PROJECT.PROJNO  AND
+                EMPPROJACT.EMPNO =EMPLOYEE.EMPNO  AND
+                PRENDATE > :RAISE_DATE
+          GROUP BY EMPPROJACT.PROJNO, PROJNAME
+          ORDER BY 1;
+   EXEC SQL
+        OPEN C2;
+
+   /* Fetch and write the rows to SYSPRINT */
+   EXEC SQL WHENEVER NOT FOUND GO TO DONE2;
+
+   DO UNTIL (SQLCODE ¬= 0);
+  EXEC SQL
+          FETCH C2 INTO :RPT2;
+     PUT FILE(SYSPRINT)
+         EDIT(RPT2.PROJNO,RPT2.PROJECT_NAME,EMPLOYEE_COUNT,
+              TOTL_PROJ_COST)
+             (SKIP,COL(1),A,COL(10),A,COL(50),F(4),COL(62),F(8,2));
+   END;
+
+ DONE2:
+   EXEC SQL
+        CLOSE C2;
+   GO TO FINISHED;
+
+   /* Error occurred while updating table. Inform user and rollback   */
+   /* changes.                                                        */
+ UPDATE_ERROR:
+ EXEC SQL WHENEVER SQLERROR CONTINUE;
+   PUT FILE(SYSPRINT) EDIT('*** ERROR Occurred while updating table.'||
+    '  SQLCODE=',SQLCODE)(A,F(5));
+ EXEC SQL
+        ROLLBACK;
+   GO TO FINISHED;
+
+   /* Error occurred while generating reports.  Inform user and exit. */
+ REPORT_ERROR:
+   PUT FILE(SYSPRINT) EDIT('*** ERROR Occurred while generating '||
+    'reports.  SQLCODE=',SQLCODE)(A,F(5));
+    GO TO FINISHED;
+
+   /* All done  */
+ FINISHED:
+   CLOSE FILE(SYSPRINT);
+   RETURN;
+
+ END PLIEX;

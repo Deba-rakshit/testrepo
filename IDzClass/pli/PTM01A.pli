@@ -1,0 +1,238 @@
+ PTM01A:PROC OPTIONS(MAIN);
+ /********************************************************************/
+ /*                                                                  */
+ /* PROGRAM: PTM01A                                                  */
+ /*                                                                  */
+ /* CREATER: TIMOTHY DAVID MAGEE                                     */
+ /*          LEXINGTON, KENTUCKY                                     */
+ /*                                                                  */
+ /* DATE: 12/28/2005                                                 */
+ /*                                                                  */
+ /* FUNCTION: DEMO OF PD TOOLS USING PLI APPLICATON LOGIC, SHOWING   */
+ /*           INPUT AND OUTPUT I/O, STATIC AND DYNAMIC VARIABLE      */
+ /*           ALLOCATION AND UPDATE, INTERAL AND EXTERNAL SUBROUTINE */
+ /*           CALLS, AND BASED VARIABLE LIGIC WITH POINTER LOGIC     */
+ /*                                                                  */
+ /* PROCESS:                                                         */
+ /*           THIS PROGRAM WILL FIRST CALL AN INTERAL SUBROUTINE TO  */
+ /*           WRITE TO AN OUTPUT REPORT FILE.  THIS IS DONE FROM AN */
+ /*           INTERNAL SUBROUTINE USING AUTOMATIC STORAGE.  IT WILL  */
+ /*           THEN OPEN AN INPUT FILE AND READ RECORDS TO IN INPUT   */
+ /*           BUFFER.  THE BUFFER ADDRESS IS SET TO A POINTER VAR    */
+ /*           THAT THE RECORD FORMATS ARE BASED ON.  IT WILL CALL    */
+ /*           A NUMBER OF NON-INTERAL SUBROUTINES BASED ON THE READ  */
+ /*           DATA PASSING VARIABLE PARMS.                           */
+ /*                                                                  */
+ /********************************************************************/
+
+ /********************************************************************/
+ /*  DATA DECLARATIONS                                               */
+ /********************************************************************/
+   DCL TMPARM1 FIXED BIN(31) INIT(5);
+   DCL TMPASS2 FIXED BIN(31) INIT(2);
+   DCL PASS2   FIXED BIN(31) INIT(2);
+   DCL 1  LEAD_PARM,
+         2  NAME    CHAR(9) INIT('TIM MAGEE'),
+         2  TOWN    CHAR(3) INIT('LEX'),
+         2  STATE   CHAR(2) INIT('KY');
+
+   /******************************************************************/
+   /* RECORD I/O READ BUFFER AND POINTER                             */
+   /******************************************************************/
+   DCL 1  INPUT_BUFFER,
+         2  REC_TYPE CHAR(2),
+         2  FILL     CHAR(78);
+
+   DCL P POINTER;
+   DCL 1 PRODUCT_RECORD,
+         2 PRODUCT_KEY,
+           3 PR_CUST_ID       CHAR(5),
+           3 PR_RECORD_TYPE   CHAR(1),
+           3 PRODUCT_ID       CHAR(7),
+         2 PRODUCT_NAME       CHAR(25),
+         2 DATE_PURCHASED     CHAR(10),
+         2 SERVICE_CALLS      FIXED BINARY(15,0) UNALIGNED,
+         2 LAST_SERVICE_CALL  CHAR(10),
+         2 RECORD_FILL        CHAR(20);
+
+   /******************************************************************/
+   /* FILE RECORD TYPES TO BE BASED ON POINTER                       */
+   /******************************************************************/
+    %INCLUDE PLCU2CUS;
+    %INCLUDE PLCU2SEG;
+
+   /******************************************************************/
+   /* FILE DECLARES                                                  */
+   /******************************************************************/
+   DCL EOF_SW  CHAR(1) INIT('N');
+   DCL INPUT1 FILE RECORD SEQUENTIAL;
+   DCL REPORT FILE RECORD SEQUENTIAL OUTPUT;
+
+   DCL PTM01B EXTERNAL ENTRY;
+   DCL PTM01D EXTERNAL ENTRY;
+
+ /********************************************************************/
+ /*  MAINLINE PROGRAM LOGIC                                          */
+ /********************************************************************/
+
+   /******************************************************************/
+   /* CALL THE SUBROUTINE TO WRITE THE OUTPUT REPORT                 */
+   /******************************************************************/
+   CALL REPORT_PROC(LEAD_PARM);
+
+   /******************************************************************/
+   /* SET EOF CONDITION ON AND OPEN INPUT FILE                       */
+   /******************************************************************/
+   ON ENDFILE(INPUT1) EOF_SW = 'Y';
+   OPEN FILE(INPUT1);
+
+   /******************************************************************/
+   /* SET THE POINTER VALUE THAT THE RECORD FORMATS ARE DEFINED TO   */
+   /* THE ADDRESS OF THE INPUT READ BUFFER                           */
+   /******************************************************************/
+   P = ADDR(INPUT_BUFFER);
+
+   /******************************************************************/
+   /* READ INPUT FILE TILL EOF CONDITION                             */
+   /******************************************************************/
+   DO WHILE (EOF_SW = 'N');
+
+     READ FILE (INPUT1) INTO (INPUT_BUFFER);
+
+     /****************************************************************/
+     /* CHECK FOR RECORD TYPE INDICATOR, IF THE FILE IS A RECORD     */
+     /* TYPE ONE, CALL PTM01D PASSING THE RECORD YEAR VALUE          */
+     /****************************************************************/
+     IF (REC_TYPE = '01') THEN
+       CALL PTM01D(LEAD_PARM);
+
+     /****************************************************************/
+     /* LOOP THE NUMBER OF TIMES THE TMPARM1 VALUE IS SET,           */
+     /* DECREMENTING THE VALUE AND CALLING PTM01B PASSING THE INIT   */
+     /* VALUE OF PASS2                                               */
+     /****************************************************************/
+     DO WHILE (TMPARM1 > 0);
+        TMPARM1 = TMPARM1 -1;
+        CALL  PTM01B(PASS2);
+     END;
+
+     /****************************************************************/
+     /* IF THE TMPASS2 VALUE IS EQUAL TO ZERO, CALL THE INTERNAL     */
+     /* PROCEDURE PROCTM PASSING THE PARM TMPASS2                    */
+     /****************************************************************/
+     IF (TMPASS2 = 0) THEN
+       CALL PROCTM(TMPASS2);
+
+     /****************************************************************/
+     /* LOOP BASED ON THE VALUE OF TMPASS2                           */
+     /****************************************************************/
+     DO WHILE (TMPASS2 > 0);
+       TMPASS2 = TMPASS2 - 1;
+     END;
+
+   END;
+
+   CLOSE FILE (INPUT1);
+
+   RETURN;
+
+ /********************************************************************/
+ /*  SUBROUTINE: PROCTM                                              */
+ /*                                                                  */
+ /*  PARM: TMPARM1 - INTEGER VALUE TO BE SET IN THE SUBROUTINE       */
+ /*                                                                  */
+ /*  FUNCTION: THIS IS A CALLED SUBROUTINE THAT WILL RECEIVE THE     */
+ /*            PASSED INTEGER PARM VALUE AND SET IT TO 10 AND RETURN */
+ /*            SET VALUE                                             */
+ /*                                                                  */
+ /********************************************************************/
+   PROCTM: PROCEDURE(TMPARM1);
+   DCL TMPARM1 FIXED BIN(31);
+    TMPARM1 = 10;
+   END PROCTM;
+
+ /********************************************************************/
+ /*  SUBROUTINE: REPORT_PROC                                         */
+ /*                                                                  */
+ /*  PARM: NAME - CHAR STRING                                        */
+ /*                                                                  */
+ /*  FUNCTION: OPEN THE OUTPUT REPORT FILE, AQUIRE THE DATE AND      */
+ /*            NAME PASSED AS A PARM, ADD THE VALUES TO THE OUTPUT   */
+ /*            BUFFERS AND WRITE THE REPORT AND CLOSE THE OUTPUT     */
+ /*            FILE                                                  */
+ /*                                                                  */
+ /********************************************************************/
+   REPORT_PROC: PROCEDURE(LEAD);
+     DCL 1  LEAD,
+           2  NAME    CHAR(9),
+           2  TOWN    CHAR(3),
+           2  STATE   CHAR(2);
+     DCL DATE_FORMAT VALUE ('YYMMDD') CHAR;
+     DCL DATEBUF      PIC 'XXXXXX';
+
+     /****************************************************************/
+     /* REPORT OUTPUT FORMAT BUFFERS                                 */
+     /****************************************************************/
+     DCL 1  LINE_ONE,
+           2 FILL1       CHAR(28) INIT(' '),
+           2 DATE_STR    CHAR(15) INIT('TODAY"S DATE = '),
+           2 TODAY_DATE,
+             3 MONTH       CHAR(2),
+             3 SLASH1      CHAR(1)  INIT('/'),
+             3 DAY         CHAR(2),
+             3 SLASH2      CHAR(1)  INIT('/'),
+             3 YEAR        CHAR(2),
+           2 FILL2       CHAR(29) INIT(' ');
+     DCL 1  LINE_TWO,
+           2 FILL1       CHAR(14) INIT(' '),
+           2 LEAD_STR1   CHAR(20) INIT(' TSS LEAD FOR IBM PD'),
+           2 LEAD_STR2   CHAR(22) INIT(' TOOL DEBUG TOOL IS = '),
+           2 LEAD_NAME   CHAR(9),
+           2 FILL2       CHAR(15) INIT(' ');
+     DCL 1  LINE_THREE,
+           2 FILL1       CHAR(23) INIT(' '),
+           2 LOC_STR1    CHAR(15) INIT('TEAM LEAD WORK '),
+           2 LOC_STR2    CHAR(14) INIT('LOCATION IS = '),
+           2 LEAD_TOWN   CHAR(3)  INIT(' '),
+           2 PRT_COMMA   CHAR(1)  INIT(','),
+           2 LEAD_STATE  CHAR(2)  INIT(' '),
+           2 FILL2       CHAR(22) INIT(' ');
+     DCL 1  LINE_BLANK   CHAR(80) INIT(' ');
+
+     /****************************************************************/
+     /* GET THE SYSTEM DATE FOR THE REPORT HEADER                    */
+     /****************************************************************/
+     DATEBUF = DATE();
+
+     /****************************************************************/
+     /* OPEN THE OUTPUT FILE                                         */
+     /****************************************************************/
+     OPEN FILE(REPORT);
+
+     /****************************************************************/
+     /* BUILD THE REPORT PRINT BUFFERS                               */
+     /****************************************************************/
+     LINE_ONE.TODAY_DATE.MONTH = SUBSTR(DATEBUF,3,2);
+     LINE_ONE.TODAY_DATE.DAY = SUBSTR(DATEBUF,5,2);
+     LINE_ONE.TODAY_DATE.YEAR = SUBSTR(DATEBUF,1,2);
+     LINE_TWO.LEAD_NAME = LEAD.NAME;
+     LINE_THREE.LEAD_TOWN = LEAD.TOWN;
+     LINE_THREE.LEAD_STATE = LEAD.STATE;
+
+     /****************************************************************/
+     /* WRITE THE OUTPUT FILE REPORT BUFFERS                         */
+     /****************************************************************/
+     WRITE FILE(REPORT) FROM(LINE_BLANK);
+     WRITE FILE(REPORT) FROM(LINE_ONE);
+     WRITE FILE(REPORT) FROM(LINE_TWO);
+     WRITE FILE(REPORT) FROM(LINE_THREE);
+     WRITE FILE(REPORT) FROM(LINE_BLANK);
+
+     /****************************************************************/
+     /* CLOSE THE OUTPUT FILE                                        */
+     /****************************************************************/
+     CLOSE FILE(REPORT);
+
+   END REPORT_PROC;
+
+ END PTM01A;

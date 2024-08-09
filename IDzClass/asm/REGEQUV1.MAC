@@ -1,0 +1,29 @@
+         MACRO                                                 @ZV!CHNG
+&LABEL   REGEQU                                                @ZV!CHNG
+.*********************************************************************
+.*                                                                   *
+.* Macro for register equates                                        *
+.*                                                                   *
+.**********************************************************************
+*
+**********************************************************************
+*          R E G I S T E R    E Q U A T E S
+**********************************************************************
+*
+R0         EQU    0                                            @ZV!CHNG
+R1         EQU    1                                            @ZV!CHNG
+R2         EQU    2                                            @ZV!CHNG
+R3         EQU    3                                            @ZV!CHNG
+R4         EQU    4                                            @ZV!CHNG
+R5         EQU    5                                            @ZV!CHNG
+R6         EQU    6                                            @ZV!CHNG
+R7         EQU    7                                            @ZV!CHNG
+R8         EQU    8                                            @ZV!CHNG
+R9         EQU    9                                            @ZV!CHNG
+R10        EQU    10                                           @ZV!CHNG
+R11        EQU    11                                           @ZV!CHNG
+R12        EQU    12                                           @ZV!CHNG
+R13        EQU    13                                           @ZV!CHNG
+R14        EQU    14                                           @ZV!CHNG
+R15        EQU    15                                           @ZV!CHNG
+           MEND   ,                                            @ZV!CHNG

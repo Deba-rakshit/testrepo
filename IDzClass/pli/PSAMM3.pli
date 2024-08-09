@@ -1,0 +1,121 @@
+ PSAMM3: PROCEDURE(CUSTFILE_RECORD,
+                  PRODUCT_STATS);
+ /****************************************************************
+  * PROGRAM:  PSAMM3   (PLI FOR MVS AND VM)
+  *
+  * AUTHOR :  Doug Stout
+  *           IBM PD TOOLS
+  *
+  * SUBROUTINE - CALLED BY PSAMM1
+  * COLLECTS STATISTICS FOR PRODUCT RECORDS
+  *
+  * THIS EXAMPLE APPLICATION IS A TEACHING AID.  INTENDED USES ARE:
+  *   FOR DEBUG TOOL WORKSHOP:
+  *      - DETERMINE WHY THE MAX VALUE IS INCORRECT IN THE REPORT
+  *      - INTERCEPT THE ABEND THAT CAN OCCUR IN PROGRAM PSAMM2
+  *   FOR FAULT ANALYZER WORKSHOP:
+  *      - DETERMINE WHY THE PSAMM2 PROGRAM ABENDS IN SOME CASES
+  *      - EXAMINE PSAMM3 STORAGE / VARIABLES EVEN THOUGH IT'S NOT ACTIVE
+  *   FOR APPLICATION PERFORMANCE ANALYZER WORKSHOP:
+  *      - DETERMINE WHERE THE APPLICATION IS SPENDING THE MOST TIME
+  ****************************************************************/
+
+   DCL DUMP_FINDER CHAR(30) INIT('*STORAGE FOR PROGRAM PSAMM3***');
+
+   /***************************************************/
+   /* PRODUCT RECORD (Passed from calling program)    */
+   /***************************************************/
+
+   /* %INCLUDE CUST2PLI; */
+   /*   ---------------------------------------------------   */
+   /*   DESCRIBES FILE <USERID>.ADLAB.FILES(CUST2)            */
+   /*   ---------------------------------------------------   */
+   DCL 1 CUSTFILE_RECORD     CHAR(80);
+   DCL 1 CUSTOMER_RECORD  BASED(ADDR(CUSTFILE_RECORD)),
+         2 CUSTOMER_KEY,
+           3 CUST_ID         CHAR(5),
+           3 RECORD_TYPE     CHAR(1),
+           3 CUST_KEY_FILL   CHAR(7),
+         2 NAME              CHAR(17),
+         2 ACCT_BALANCE      FIXED DEC (9,2) UNALIGNED,
+         2 ORDERS_YTD        FIXED BINARY(15,0) UNALIGNED,
+         2 CITY              CHAR(15),
+         2 OCCUPATION        CHAR(28);
+   DCL 1 PRODUCT_RECORD   BASED(ADDR(CUSTFILE_RECORD)),
+         2 PRODUCT_KEY,
+           3 CUST_ID         CHAR(5),
+           3 RECORD_TYPE     CHAR(1),
+           3 PRODUCT_ID      CHAR(7),
+         2 PRODUCT_NAME      CHAR(25),
+         2 DATE_PURCHASED    CHAR(10),
+         2 SERVICE_CALLS     FIXED BINARY(15,0) UNALIGNED,
+         2 LAST_SERVICE_CALL CHAR(10),
+         2 PROD_REC_FILL     CHAR(20);
+
+   /***********************************************************/
+   /* Statistics Accumulators (Passed from calling program)   */
+   /***********************************************************/
+
+   DCL 1 PRODUCT_STATS,
+         2 RECORD_COUNT      DEC(8),
+         2 SERV_CALLS_TOTAL  DEC(12,2),
+         2 SERV_CALLS_MIN    DEC(12,2),
+         2 SERV_CALLS_MAX    DEC(12,2),
+         2 SERV_CALLS_RANGE  DEC(12,2),
+         2 SERV_CALLS_AVG    DEC(12,2),
+         2 PRODUCT_FIRST_TIME_SW  PIC '9';
+
+   /********************/
+   /* GENERAL DECLARES */
+   /********************/
+
+   DCL PROGRAM_STATUS        CHAR(35)  BASED(PS_PTR);
+
+   /*****************************************************
+    * PSAMM3 PROGRAM ROUTINE                            *
+    *****************************************************/
+
+   ALLOCATE PROGRAM_STATUS;
+   PROGRAM_STATUS = 'PROGRAM STARTED';
+   IF ( PRODUCT_RECORD.RECORD_TYPE ¬= 'P' )  THEN  DO;
+     RETURN;
+   END;
+   IF ( PRODUCT_FIRST_TIME_SW ) THEN DO;
+     PROGRAM_STATUS = 'ZEROING STATS VARIABLES';
+     RECORD_COUNT = 0;
+     SERV_CALLS_TOTAL = 0;
+     SERV_CALLS_MIN = 0;
+     SERV_CALLS_MAX = 0;
+     SERV_CALLS_RANGE = 0;
+     SERV_CALLS_AVG = 0;
+   END;
+
+   PROGRAM_STATUS = 'CALCULATING SERVICE CALLS STATS';
+   RECORD_COUNT = RECORD_COUNT + 1;
+   SERV_CALLS_TOTAL = SERV_CALLS_TOTAL + SERVICE_CALLS;
+            /* Calculate Average */
+   SERV_CALLS_AVG = SERV_CALLS_TOTAL / RECORD_COUNT;
+            /* Calculate Minimum */
+   IF ( PRODUCT_FIRST_TIME_SW ) THEN DO;
+     SERV_CALLS_MIN = SERVICE_CALLS;
+   END;
+   IF ( SERVICE_CALLS < SERV_CALLS_MIN ) THEN
+     SERV_CALLS_MIN = SERVICE_CALLS;
+            /* Calculate Maximum */
+   IF ( PRODUCT_FIRST_TIME_SW ) THEN DO;
+     SERV_CALLS_MAX = SERVICE_CALLS;
+   END;
+   IF ( SERVICE_CALLS > SERV_CALLS_MAX ) THEN
+     SERV_CALLS_MAX = SERVICE_CALLS;
+            /* Calculate Range   */
+   SERV_CALLS_RANGE = SERV_CALLS_MAX - SERV_CALLS_MIN;
+
+   PRODUCT_FIRST_TIME_SW = 0;
+
+   PROGRAM_STATUS = 'PROGRAM ENDING';
+   FREE PROGRAM_STATUS;
+
+   RETURN;
+
+ PROGRAM_END:
+ END PSAMM3;

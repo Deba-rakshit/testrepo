@@ -1,0 +1,103 @@
+ EPSBDP2: PROC (CA_PTR) OPTIONS(MAIN,REENTRANT) REORDER;                00010003
+  /************************************************************/        00020021
+  /*    THIS IS A CALLED PROGRAM EXAMPLE FOR DEMONSTRATION    */        00030022
+  /*                                                          */        00040022
+  /*    THIS PROGRAM WILL BE CALLED BY ANOTHER, RECEIVE A     */        00050022
+  /*    DATE(YYYYMMDD) AND DETERMINE THE NUMBER OF DAYS       */        00060022
+  /*    SINCE CURRENT DATE.                                   */        00070022
+  /*                                                          */        00080022
+  /*    (C) 2003 IBM -JANICE WINCHELL.                        */        00090022
+  /*         TRANSLATED INTO PL/1 BY ALAN SCHWARTZ OCT 2006   */        00100022
+  /************************************************************/        00110022
+    DCL CEEDAYS EXTERNAL ENTRY OPTIONS(ASSEMBLER);                      00120019
+    DCL CEEDATE EXTERNAL ENTRY OPTIONS(ASSEMBLER);                      00130019
+                                                                        00140019
+    DCL CA_PTR PTR;                                                     00150007
+    DCL 01 INTERFACE_AREA BASED(CA_PTR),                                00160001
+        05 L_INPUT_DATE,                                                00170005
+           10 L_YYYY            PIC '(4)9',                             00180005
+           10 L_MM              PIC '(2)9',                             00190005
+           10 L_DD              PIC '(2)9',                             00200005
+        05 L_DAY_DIFFERENCE     PIC '(9)9',                             00210005
+        05 L_DATE_FORMATTED     PIC '(29)X',                            00220005
+        05 L_PROGRAM_RETCODE    PIC '(4)9';                             00230005
+                                                                        00240005
+    DCL L_INPUT_DATE_STRING  PIC '(8)9' BASED(ADDR(L_INPUT_DATE));      00250010
+    DCL W_INPUT_DATE         PIC '(8)9';                                00260010
+    DCL W_INPUT_DATE_INT     FIXED BIN(31);                             00270005
+                                                                        00280005
+    DCL 01 W_CURRENT_DATE       PIC '(8)9';                             00290005
+    DCL 01 W_CURRENT_DATE_INT   PIC '(9)9';                             00300005
+                                                                        00310005
+    DCL 01 W_DAY_DIFFERENCE     PIC '(9)9';                             00320005
+                                                                        00330005
+    DCL W_PICSTR_IN CHAR(255) VARYING INIT('YYYYMMDD');                 00340012
+    DCL W_DATE_IN_CEE CHAR(255) VARYING;                                00350011
+                                                                        00360005
+    DCL 01 FC,                                                          00370008
+        10  FC_SEV         FIXED BIN(15),                               00380020
+        10  FC_MSG         FIXED BIN(15),                               00390020
+        10  FC_FLAGS,                                                   00400017
+            15 FC_CASE     BIT(2),                                      00410017
+            15 FC_SEVERITY BIT(3),                                      00420017
+            15 FC_CONTROL  BIT(3),                                      00430017
+        10  FC_FAC         CHAR(3),                                     00440017
+        10  FC_ISI         FIXED BIN(31);                               00450020
+                                                                        00460005
+    DCL W_OUT_DATE            PIC '(80)X';                              00470005
+                                                                        00480005
+    DCL W_PICSTR CHAR(255) VARYING                                      00490011
+                          INIT('WWWWWWWWWZ DD MMMMMMMMMZ YYYY');        00500005
+                                                                        00510000
+     CALL A100_OBTAIN_CURRENT_DATE;                                     00520016
+     CALL A200_CALCULATE_DAY_DIFFERENCE;                                00530016
+     CALL A300_FORMAT_DATE;                                             00540016
+     EXEC CICS RETURN;                                                  00550016
+                                                                        00560016
+     A100_OBTAIN_CURRENT_DATE: PROC;                                    00570016
+        W_CURRENT_DATE = DATETIME('YYYYMMDD');                          00580016
+        W_CURRENT_DATE_INT = DAYS(W_CURRENT_DATE,'YYYYMMDD');           00590016
+       RETURN;                                                          00600016
+     END A100_OBTAIN_CURRENT_DATE;                                      00610016
+                                                                        00620016
+     A200_CALCULATE_DAY_DIFFERENCE: PROC;                               00630016
+       W_INPUT_DATE = L_INPUT_DATE_STRING;                              00640016
+                                                                        00650016
+       W_INPUT_DATE_INT = DAYS(W_INPUT_DATE,'YYYYMMDD');                00660016
+                                                                        00670016
+       W_DAY_DIFFERENCE = W_CURRENT_DATE_INT - W_INPUT_DATE_INT;        00680016
+                                                                        00690016
+       L_DAY_DIFFERENCE = W_DAY_DIFFERENCE;                             00700016
+       L_PROGRAM_RETCODE = 0;                                           00710016
+       L_DATE_FORMATTED = 0;                                            00720016
+       RETURN;                                                          00730016
+     END A200_CALCULATE_DAY_DIFFERENCE;                                 00740016
+                                                                        00750016
+     A300_FORMAT_DATE: PROC;                                            00760016
+       W_DATE_IN_CEE = W_INPUT_DATE;                                    00770016
+                                                                        00780016
+       CALL CEEDAYS (W_DATE_IN_CEE,                                     00790016
+                         W_PICSTR_IN, W_INPUT_DATE_INT, FC);            00800016
+                                                                        00810016
+       IF FC_SEV = 0  THEN DO;                                          00820016
+          L_DATE_FORMATTED = W_OUT_DATE;                                00830016
+          L_PROGRAM_RETCODE = 0;                                        00840016
+       END;                                                             00850016
+       ELSE DO;                                                         00860016
+          L_DATE_FORMATTED = 'BAD DATE';                                00870016
+          L_PROGRAM_RETCODE = FC_MSG;                                   00880016
+       END;                                                             00890016
+                                                                        00900016
+       CALL CEEDATE (W_INPUT_DATE_INT, W_PICSTR, W_OUT_DATE, FC);       00910016
+                                                                        00920016
+       IF FC_SEV = 0 THEN DO;                                           00930016
+          L_DATE_FORMATTED = W_OUT_DATE;                                00940016
+          L_PROGRAM_RETCODE = 0;                                        00950016
+       END;                                                             00960016
+       ELSE DO;                                                         00970016
+          L_DATE_FORMATTED = 'BAD DATE';                                00980016
+          L_PROGRAM_RETCODE = FC_MSG;                                   00990016
+       END;                                                             01000008
+       RETURN;                                                          01010001
+     END A300_FORMAT_DATE;                                              01020001
+ END EPSBDP2;                                                           01030001

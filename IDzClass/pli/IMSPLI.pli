@@ -1,0 +1,103 @@
+ DLITPLI: PROCEDURE (IO_PTR_PCB,DB_PTR_MAST,DB_PTR_DETAIL)
+              OPTIONS (MAIN);
+ /*                                                     */
+ /*             DESCRIPTIVE STATEMENTS                  */
+ /*                                                     */
+ DCL  IO_PTR_PCB POINTER;
+ DCL  DB_PTR_MAST POINTER;
+ DCL  PLITDLI CHAR(8)    INIT('PLITDLI');
+ DCL  DB_PTR_DETAIL POINTER;
+ DCL  GOOD_STATUS_CODE     CHAR(2)    INIT(' ');
+ DCL  FUNC_GU     CHAR(4)    INIT('GU  ');
+ DCL  FUNC_GN     CHAR(4)    INIT('GN  ');
+ DCL  FUNC_GHU    CHAR(4)    INIT('GHU ');
+ DCL  FUNC_GHN    CHAR(4)    INIT('GHN ');
+ DCL  FUNC_GNP    CHAR(4)    INIT('GNP ');
+ DCL  FUNC_GHNP   CHAR(4)    INIT('GHNP');
+ DCL  FUNC_ISRT   CHAR(4)    INIT('ISRT');
+ DCL  FUNC_REPL   CHAR(4)    INIT('REPL');
+ DCL  FUNC_DLET   CHAR(4)    INIT('DLET');
+ DCL 1    QUAL_SSA           STATIC UNALIGNED,
+         2   SEG_NAME       CHAR(8) INIT('ROOT    '),
+         2   SEG_QUAL       CHAR(1) INIT('('),
+         2   SEG_KEY_NAME   CHAR(8) INIT('KEY    '),
+         2   SEG_OPR        CHAR(2) INIT(' ='),
+         2   SEG_KEY_VALUE  CHAR(6) INIT('vvvvv'),
+         2   SEG_END_CHAR   CHAR(1) INIT(')');
+ DCL 1    UNQUAL_SSA         STATIC UNALIGNED,
+         2   SEG_NAME_U     CHAR(8) INIT('NAME    '),
+         2   BLANK          CHAR(1) INIT(' ');
+ DCL 1   MAST_SEG_IO_AREA,
+         2   SEG_NAME       CHAR(8) INIT('ROOT    '),
+         2   SEG_QUAL       CHAR(1) INIT('('),
+         2   SEG_KEY_NAME   CHAR(8) INIT('KEY    '),
+         2   SEG_OPR        CHAR(2) INIT(' ='),
+         2   SEG_KEY_VALUE  CHAR(6) INIT('vvvvv'),
+         2   SEG_END_CHAR   CHAR(1) INIT(')');
+ DCL 1   DET_SEG_IO_AREA,
+         2   SEG_NAME       CHAR(8) INIT('ROOT    '),
+         2   SEG_QUAL       CHAR(1) INIT('('),
+         2   SEG_KEY_NAME   CHAR(8) INIT('KEY    '),
+         2   SEG_OPR        CHAR(2) INIT(' ='),
+         2   SEG_KEY_VALUE  CHAR(6) INIT('vvvvv');
+ DCL 1    IO_PCB               BASED (IO_PTR_PCB),
+         2   FILLER           CHAR(10),
+         2   STAT             CHAR(2);
+ DCL 1    DB_PCB_MAST          BASED (DB_PTR_MAST),
+         2   MAST_DB_NAME     CHAR(8),
+         2   MAST_SEG_LEVEL   CHAR(2),
+         2   MAST_STAT_CODE   CHAR(2),
+         2   MAST_PROC_OPT    CHAR(4),
+         2   FILLER           FIXED BINARY (31,0),
+         2   MAST_SEG_NAME    CHAR(8),
+         2   MAST_LEN_KFB     FIXED BINARY (31,0),
+         2   MAST_NO_SENSEG   FIXED BINARY (31,0),
+         2   MAST_KEY_FB      CHAR(*);
+ DCL 1    DB_PCB_DETAIL        BASED (DB_PTR_DETAIL),
+         2   DET_DB_NAME      CHAR(8),
+         2   DET_SEG_LEVEL    CHAR(2),
+         2   DET_STAT_CODE    CHAR(2),
+         2   DET_PROC_OPT     CHAR(4),
+         2   FILLER           FIXED BINARY (31,0),
+         2   DET_SEG_NAME     CHAR(8),
+         2   DET_LEN_KFB      FIXED BINARY (31,0),
+         2   DET_NO_SENSEG    FIXED BINARY (31,0),
+         2   DET_KEY_FB       CHAR(*);
+ DCL      THREE    FIXED BINARY     (31,0)   INITIAL(3);
+ DCL      FOUR     FIXED BINARY     (31,0)   INITIAL(4);
+ DCL      FIVE     FIXED BINARY     (31,0)   INITIAL(5);
+ DCL      SIX      FIXED BINARY     (31,0)   INITIAL(6);
+ /*                                                      */
+ /*            MAIN PART OF PL/I BATCH PROGRAM           */
+ /*                                                      */
+ CALL PLITDLI (FOUR,FUNC_GU,DB_PCB_DETAIL,DET_SEG_IO_AREA, QUAL_SSA);
+   IF DET_STAT_CODE = GOOD_STATUS_CODE THEN DO;
+     CALL PLITDLI (FOUR,FUNC_GHU,DB_PCB_MAST,MAST_SEG_IO_AREA,QUAL_SSA);
+      IF MAST_STAT_CODE = GOOD_STATUS_CODE THEN DO;
+         CALL PLITDLI (THREE,FUNC_GHN,DB_PCB_MAST,MAST_SEG_IO_AREA);
+         IF MAST_STAT_CODE = GOOD_STATUS_CODE THEN DO;
+            CALL PLITDLI (THREE,FUNC_REPL,DB_PCB_MAST,MAST_SEG_IO_AREA);
+            IF MAST_STAT_CODE = GOOD_STATUS_CODE THEN DO;
+               /* INSERT REPLACE DIAGNOSTIC MESSAGE */
+         	END;
+			END;
+         ELSE DO;
+            /* INSERT GHN DIAGNOSTIC MESSAGE */
+			END;
+         END;
+      ELSE DO;
+         /* INSERT GHU DIAGNOSTIC MESSAGE */
+		      END;
+ END;
+ ELSE DO;
+   /* INSERT GU DIAGNOSTIC MESSAGE */
+   CALL PLITDLI (THREE, FUNC_REPL,DB_PCB_DETAIL);
+   IF DET_STAT_CODE = GOOD_STATUS_CODE |
+         DET_STAT_CODE ^= GOOD_STATUS_CODE
+
+          THEN DO;
+		   /* INSERT REPL ERROR DIAGNOSTIC CODE */
+	   END;
+   END;
+ RETURN;
+ END DLITPLI;

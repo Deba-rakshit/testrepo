@@ -1,0 +1,154 @@
+ EBUDP1: PROC (INPUT_STRING) OPTIONS(MAIN,REENTRANT) REORDER;
+     /***************************************************************/
+     /*    THIS IS THE FIRST OF SEVERAL SAMPLE PROGRAMS FOR EBU 2004
+     /*
+     /*    THIS PROGRAM WILL RECEIVE A DATE AND COVERT THE DATE TO
+     /*    AN INTEGER IN A CALLED PROGRAM TO DETERMINE DAYS FROM
+     /*    CURRENT DATE.
+     /*
+     /*    (C) 2003 IBM - KEVIN J. CUMMINGS RESERVED.
+     /*        TRANSLATED TO PLI BY ALAN SCHWARTZ  OCT 2006
+     /***************************************************************/
+   DCL EBUDP2 EXTERNAL ENTRY OPTIONS(FETCHABLE);
+   DCL EBUDP3 EXTERNAL ENTRY OPTIONS(FETCHABLE);
+   DCL INPUT_STRING CHAR(255) VARYING;
+   DCL I PIC '(2)9';
+   DCL EBUDP2_PROGRAM_RETCODE PIC '(2)9';
+   DCL 01 L_INPUT_DATE,
+          10 L_CCYY  PIC '(4)X',
+          10 L_MM    PIC '(2)X',
+          10 L_DD    PIC '(2)X';
+
+   DCL W_BIRTHDATE_CHARS  CHAR(8) BASED(ADDR(L_INPUT_DATE));
+   DCL W_NUMERIC_BIRTHDATE CHAR(1);
+
+   DCL W_DAYS_IN_BIRTH_MONTH FIXED BIN(15);
+   DCL W_DAYS_IN_MONTH(12) FIXED BIN(15)
+               INIT(31,28,31,30,31,30,31,31,30,31,30,31);
+
+   DCL W_CALL_PROGRAM           PIC '(8)X';
+   DCL W_RETIREMENT_WA          PIC '(4)9';
+   DCL RETURN_CODE              PIC '(4)9'  INIT(0);
+
+   DCL W_EBUDP2_PARM_STRING CHAR(21);
+   DCL 01 W_EBUDP2_LINKAGE_AREA BASED(ADDR(W_EBUDP2_PARM_STRING)),
+          05 W_INPUT_DATE,
+             10 W_CCYY                  PIC '(4)9',
+             10 W_MM                    PIC '(2)9',
+             10 W_DD                    PIC '(2)9',
+          05 W_DAY_DIFFERENCE           PIC '(9)9',
+          05 W_EBUDP2_PROGRAM_RETCODE   PIC '(4)9';
+
+   DCL W_EBUDP2_REQUEST_SUCCESS  PIC '(4)9' INIT(0);
+
+   DCL W_EBUDP3_PARM_STRING CHAR(94);
+   DCL 01 W_EBUDP3_LINKAGE_AREA BASED(ADDR(W_EBUDP3_PARM_STRING)),
+          05 W_RETIREMENT_DATE_IN,
+             10 W_RET_YYYY  PIC '(4)X',
+             10 SLASH1      PIC '(1)X',
+             10 W_RET_MM    PIC '(2)X',
+             10 SLASH2      PIC '(1)X',
+             10 W_RET_DD    PIC '(2)X',
+          05 W_RETIREMENT_DATE        PIC '(80)X',
+          05 W_EBUDP3_PROGRAM_RETCODE PIC '(4)9';
+
+   DCL W_EBUDP3_REQUEST_SUCCESS PIC'(4)9' INIT(0);
+
+       W_BIRTHDATE_CHARS = INPUT_STRING;
+       CALL A100_VERIFY_INPUT_DATE;
+       IF (RETURN_CODE = 0) THEN DO;
+           CALL A200_CALL_DAY_DIFFERENCE_PROG;
+       END;
+       IF (RETURN_CODE = 0) THEN DO;
+           CALL A300_CALCULATE_RETIREMENT;
+       END;
+       RETURN;
+
+   A100_VERIFY_INPUT_DATE: PROC;
+       W_NUMERIC_BIRTHDATE = 'Y';
+       DO I = 1 TO 8;
+         IF (SUBSTR(W_BIRTHDATE_CHARS,I,1) < '0' |
+                SUBSTR(W_BIRTHDATE_CHARS,I,1) > '9') THEN
+                                        W_NUMERIC_BIRTHDATE = 'N';
+       END;
+       IF (W_NUMERIC_BIRTHDATE = 'N') THEN DO;
+          RETURN_CODE = 16;
+          PUT SKIP LIST('INPUT DATE NOT NUMERIC - ', L_INPUT_DATE);
+       END;
+       ELSE DO;
+          IF (L_MM >= 01) & (L_MM <= 12) THEN DO;
+              W_DAYS_IN_BIRTH_MONTH = W_DAYS_IN_MONTH(L_MM);
+          END;
+          ELSE DO;
+              W_DAYS_IN_BIRTH_MONTH = 0;
+          END;
+          IF (L_MM = 02) THEN DO;
+            IF (MOD(L_CCYY,4) = 0) THEN DO;
+                W_DAYS_IN_BIRTH_MONTH = 29;
+            END;
+            IF ((MOD(L_CCYY,100) = 0) &
+                       (MOD(L_CCYY,400) = 0)) THEN DO;
+                W_DAYS_IN_BIRTH_MONTH = 28;
+            END;
+          END;
+          IF (L_CCYY < 1582 |
+                L_MM > 12 | L_MM < 01 |
+                 L_DD > W_DAYS_IN_BIRTH_MONTH | L_DD < 01 |
+                  W_BIRTHDATE_CHARS > DATETIME('YYYYMMDD')) THEN DO;
+              RETURN_CODE = 16;
+              PUT SKIP LIST ('INPUT DATE ', L_INPUT_DATE);
+              PUT SKIP LIST ('IS INVALID IN YEAR/MONTH/DAY');
+          END;
+          ELSE DO;
+              W_INPUT_DATE = L_INPUT_DATE;
+              PUT SKIP LIST('WORKING DATE:          - ', W_INPUT_DATE);
+              RETURN_CODE = 0;
+          END;
+       END;
+       RETURN;
+   END A100_VERIFY_INPUT_DATE;
+
+   A200_CALL_DAY_DIFFERENCE_PROG: PROC;
+       W_CALL_PROGRAM = 'EBUDP2';
+       W_DAY_DIFFERENCE = 0;
+       EBUDP2_PROGRAM_RETCODE = 0;
+
+       CALL EBUDP2(W_EBUDP2_PARM_STRING);
+
+       IF (W_EBUDP2_PROGRAM_RETCODE = W_EBUDP2_REQUEST_SUCCESS) THEN DO;
+          PUT SKIP LIST('DAYS DIFFERENCE = ', W_DAY_DIFFERENCE);
+       END;
+       ELSE DO;
+          PUT SKIP LIST('PROBLEMS IN CALL OF ', W_CALL_PROGRAM);
+          PUT SKIP LIST
+                 ('PROGRAM RETURN CODE ', W_EBUDP2_PROGRAM_RETCODE);
+       END;
+       RETURN;
+   END A200_CALL_DAY_DIFFERENCE_PROG;
+
+
+   A300_CALCULATE_RETIREMENT: PROC;
+       W_RETIREMENT_WA = W_CCYY + 65;
+       W_RET_YYYY = W_RETIREMENT_WA;
+       SLASH1 = '/';
+       W_RET_MM = W_MM;
+       SLASH2 = '/';
+       W_RET_DD = W_DD;
+       W_RETIREMENT_DATE = ' ';
+       W_EBUDP3_PROGRAM_RETCODE = 0;
+       W_CALL_PROGRAM = 'EBUDP3';
+
+       CALL EBUDP3(W_EBUDP3_PARM_STRING);
+
+       IF (W_EBUDP3_PROGRAM_RETCODE = W_EBUDP3_REQUEST_SUCCESS) THEN DO;
+          PUT SKIP LIST('RETIREMENT_DATE = ', W_RETIREMENT_DATE);
+       END;
+       ELSE DO;
+          PUT SKIP LIST('PROBLEMS IN CALL OF ', W_CALL_PROGRAM);
+          PUT SKIP LIST
+                 ('PROGRAM RETURN CODE ', W_EBUDP3_PROGRAM_RETCODE);
+       END;
+       RETURN;
+   END A300_CALCULATE_RETIREMENT;
+
+ END EBUDP1;

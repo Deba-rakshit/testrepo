@@ -1,0 +1,37 @@
+*PROCESS;
+ REGI0BP: /* Division  */
+          PROC (NUMERATOR, DENOMINATOR)
+          RETURNS (FIXED BIN(31))
+          REORDER;
+          DFT RANGE(*) ALIGNED ;
+          /*-------------------------------------------------------*/
+          /*                                                       */
+          /*-------------------------------------------------------*/
+
+          /*-------------------------------------------------------*/
+          /*  PARAMETERS                                           */
+          /*-------------------------------------------------------*/
+          DCL NUMERATOR                 FIXED BIN(31);
+          DCL DENOMINATOR               FIXED BIN(31);
+          DCL RECEIVED_DENOMINATOR      FIXED BIN(31);
+          DCL RECEIVED_NUMERATOR        FIXED BIN(31);
+          DCL RESULT_TO_RETUN           FIXED BIN(31);
+
+          /*-------------------------------------------------------*/
+          /*  WORKING STORAGE                                      */
+          /*-------------------------------------------------------*/
+
+          /*-------------------------------------------------------*/
+          /*  MAIN PROCESS   -                                     */
+          /* IF receives 0 will cause divide by ZERO exception     */
+          /*-------------------------------------------------------*/
+
+          RECEIVED_DENOMINATOR  = DENOMINATOR ;
+          RECEIVED_NUMERATOR    = NUMERATOR ;
+
+          RESULT_TO_RETUN  =  (NUMERATOR / DENOMINATOR) ;
+
+          RETURN (RESULT_TO_RETUN ) ;
+
+
+          END ; /* REGI0CP */

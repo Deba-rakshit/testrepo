@@ -1,0 +1,84 @@
+ /**************************** PL/I SOURCE ***************************/ 00001000
+ /*                                                                  */ 00002000
+ /*                  M O D U L E    P R O L O G U E                  */ 00003000
+ /*                                                                  */ 00004000
+ /********************************************************************/ 00005000
+ /*                                                                  */ 00006000
+ /*        Name: DFSXMPL1 test program to gen xml from the catalog   */ 00007000
+ /*                                                                  */ 00008000
+ /* Description:                                                     */ 00009000
+ /*DFSXMPL1 PL1 CATALOG TO XML CONVERSION                            */ 00010000
+ /************************************************************@SCPYRT*/ 00011000
+ /*                                                                  */ 00012000
+ /*  Licensed Materials - Property of IBM                            */ 00013000
+ /*                                                                  */ 00014000
+ /*  5635-A02                                                        */ 00015000
+ /*                                                                  */ 00016000
+ /*      Copyright IBM Corp. 1974,2010 All Rights Reserved.          */ 00017000
+ /*                                                                  */ 00018000
+ /*  US Government Users Restricted Rights - Use, duplication or     */ 00019000
+ /*  disclosure restricted by GSA ADP Schedule Contract with         */ 00020000
+ /*  IBM Corp.                                                       */ 00021000
+ /************************************************************@ECPYRT*/ 00022000
+ /*                                                                  */ 00023000
+ /*      Status:  IMS 12.1                                           */ 00024000
+ /*                                                                  */ 00025000
+ /* Module type:  PL/I SOURCE                                        */ 00026000
+ /*                                                                  */ 00027000
+ /*     Changes:  This module is new in IMS 12.1                     */ 00028000
+ /* APAR...  ID  PREREQ.  DATE....  DESCRIPTION..................... */ 00029000
+ /*                                                                  */ 00030000
+ /*                                                                  */ 00031000
+ /*                                                                  */ 00032000
+ /*                                                                  */ 00033000
+ /************************************************************@ECPYRT*/ 00034000
+ /*                                                                  */ 00035000
+ /*  You must have access to Language Environment when you compile   */ 00036000
+ /* your Enterprise PL/I application. When you compile your          */ 00037000
+ /* application and you use existing JCL, be sure your STEPLIB or    */ 00038000
+ /* JOBLIB statement includes SCEERUN (Language Environment run-time */ 00039000
+ /* library) or that SCEERUN is in LNKLST. You can use the IBMZC     */ 00040000
+ /* cataloged procedure to compile PL/I applications.                */ 00041000
+ /*                                                                  */ 00042000
+ /*Your compile step should include the following:                   */ 00043000
+ /*                                                                  */ 00044000
+ /*//PLI EXEC PGM=IBMZPLI,REGION=4000K                               */ 00045000
+ /*//STEPLIB DD DSN=&LNGPRFX;.SIBMZCMP,DISP=SHR                      */ 00046000
+ /*// DD DSN=&LIBPRFX;.SCEERUN,DISP=SHR                              */ 00047000
+ /*                                                                  */ 00048000
+ /*                                                                  */ 00049000
+ /*                                                                  */ 00050000
+ /*                                                                  */ 00051000
+ /*******************************************************************/  00052000
+ /*DFSXMPL1 PL1 STRUCTURE OF IMS CATALOG SEGMENTS                   */  00053000
+ /*******************************************************************/  00054000
+0XMLPLI:PROC (DSEG_PTR) OPTIONS (MAIN);     /* LEE: shortened name  */  00055002
+-DCL DSEG_PTR  POINTER;                                                 00056000
+                                                                        00057000
+         dcl (addr, stg, xmlchar) builtin;  /* LEE: added the DCL   */  00057102
+                                            /* to remove compile    */  00057202
+                                            /* warnings             */  00058002
+         dcl buffer   char(800);                                        00059000
+         dcl written  fixed bin(31);                                    00060000
+         dcl next     pointer;                                          00061000
+         dcl left     fixed bin(31);                                    00062000
+         dcl                                                            00063000
+           1 a,                                                         00064000
+            2 a1,                                                       00065000
+              3 b1 char(8),                                             00066000
+              3 b2 char(8),                                             00067000
+            2 a2,                                                       00068000
+              3 c1 fixed bin,                                           00069000
+              3 c2 fixed dec(5,1);                                      00070000
+         b1 = ' t1';                                                    00071000
+         b2 = 't2';                                                     00072000
+         c1 = 17;                                                       00073000
+         c2 = -29;                                                      00074000
+         next = addr(buffer);                                           00075000
+         left = stg(buffer);                                            00076000
+         written = xmlchar( a, next, left );                            00077000
+         next += written;                                               00078000
+         left -= written;                                               00079000
+                                                                        00080000
+                                                                        00081000
+ END XMLPLI;                                /* LEE: matched name   */   00086002

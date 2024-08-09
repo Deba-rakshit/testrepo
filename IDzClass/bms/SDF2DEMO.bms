@@ -1,0 +1,212 @@
+*DGI*DSECT DEMOMAP
+*DGI*D 04 NEWSTRUCT                                                   
+*DGI*REP*013 008 003 001 072-NEWSTRUCT                                   
+*DGI*D 07 FIELDA                                                      
+*DGI*03           -FIELDA                                             
+*DGI*D 07 FIELDB                                                     
+*DGI*03           -FIELDB                                            
+*DGI*D 07 FIELDC                                                     
+*DGI*03           -FIELDC                                            
+*DGI*D 07 FIELDD                                                     
+*DGI*03           -FIELDD                                            
+*DGI*D 07 FIELDE                                                     
+*DGI*03           -FIELDE
+*DGI*C This is a field level comment
+*DGI*D 02 INPUT                                                      
+*DGI*02           -INPUT                                             
+*DGI*END                                            
+DEMO     DFHMSD TYPE=MAP,MODE=INOUT,LANG=COBOL,STORAGE=AUTO
+DEMOMAP  DFHMDI SIZE=(24,80),                                          *
+               CTRL=HONEOM,                                            *
+               COLUMN=1,                                               *
+               LINE=1,                                                 *
+               MAPATTS=HILIGHT,                                        *
+               JUSTIFY=LEFT,DATA=FIELD,TIOAPFX=YES
+         DFHMDF POS=(1,19),LENGTH=42,                                  *
+               INITIAL='BMS MAP WITH STRUCTURES AND COMPLEX ARRAYS',   *
+               ATTRB=(ASKIP,BRT),HILIGHT=OFF,COLOR=BLUE
+         DFHMDF POS=(2,3),LENGTH=20,INITIAL='     FIELD A',            *
+               ATTRB=(ASKIP,NORM),HILIGHT=REVERSE
+         DFHMDF POS=(2,24),LENGTH=1,                                   *
+               ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(2,27),LENGTH=9,INITIAL=' FIELD B',                *
+               ATTRB=(ASKIP,NORM),HILIGHT=REVERSE
+         DFHMDF POS=(2,37),LENGTH=1,                                   *
+               ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(2,40),LENGTH=15,INITIAL='FIELD C',                *
+               ATTRB=(ASKIP,NORM),HILIGHT=REVERSE
+         DFHMDF POS=(2,56),LENGTH=0,                                   *
+               ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(2,57),LENGTH=15,INITIAL='FIELD D',                *
+               ATTRB=(ASKIP,NORM),HILIGHT=REVERSE
+         DFHMDF POS=(2,73),LENGTH=1,                                   *
+               ATTRB=(ASKIP,NORM)
+* FIELDA                          FIELDA                            
+FIELDA   DFHMDF POS=(3,1),LENGTH=1,                                    *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(3,3),LENGTH=0,                                    *
+               ATTRB=ASKIP
+* FIELDB                          FIELDB                            
+FIELDB   DFHMDF POS=(3,4),LENGTH=20,                                   *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(3,25),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDC                          FIELDC                            
+FIELDC   DFHMDF POS=(3,27),LENGTH=10,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(3,38),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDD                          FIELDD                            
+FIELDD   DFHMDF POS=(3,40),LENGTH=15,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(3,56),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDE                          FIELDE                            
+FIELDE   DFHMDF POS=(3,57),LENGTH=15,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(3,73),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDA                          FIELDA                            
+FIELDA1  DFHMDF POS=(4,1),LENGTH=1,                                    *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(4,3),LENGTH=0,                                    *
+               ATTRB=ASKIP
+* FIELDB                          FIELDB                            
+FIELDB1  DFHMDF POS=(4,4),LENGTH=20,                                   *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(4,25),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDC                          FIELDC                            
+FIELDC1  DFHMDF POS=(4,27),LENGTH=10,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(4,38),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDD                          FIELDD                            
+FIELDD1  DFHMDF POS=(4,40),LENGTH=15,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(4,56),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDE                          FIELDE                            
+FIELDE1  DFHMDF POS=(4,57),LENGTH=15,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(4,73),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDA                          FIELDA                            
+FIELDA2  DFHMDF POS=(5,1),LENGTH=1,                                    *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(5,3),LENGTH=0,                                    *
+               ATTRB=ASKIP
+* FIELDB                          FIELDB                            
+FIELDB2  DFHMDF POS=(5,4),LENGTH=20,                                   *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(5,25),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDC                          FIELDC                            
+FIELDC2  DFHMDF POS=(5,27),LENGTH=10,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(5,38),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDD                          FIELDD                            
+FIELDD2  DFHMDF POS=(5,40),LENGTH=15,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(5,56),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDE                          FIELDE                            
+FIELDE2  DFHMDF POS=(5,57),LENGTH=15,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(5,73),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDA                          FIELDA                            
+FIELDA3  DFHMDF POS=(6,1),LENGTH=1,                                    *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(6,3),LENGTH=0,                                    *
+               ATTRB=ASKIP
+* FIELDB                          FIELDB                            
+FIELDB3  DFHMDF POS=(6,4),LENGTH=20,                                   *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(6,25),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDC                          FIELDC                            
+FIELDC3  DFHMDF POS=(6,27),LENGTH=10,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(6,38),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDD                          FIELDD                            
+FIELDD3  DFHMDF POS=(6,40),LENGTH=15,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(6,56),LENGTH=0,                                   *
+               ATTRB=ASKIP
+* FIELDE                          FIELDE                            
+FIELDE3  DFHMDF POS=(6,57),LENGTH=15,                                  *
+               JUSTIFY=(LEFT,BLANK),                                   *
+               ATTRB=(PROT,FSET,BRT)
+         DFHMDF POS=(6,73),LENGTH=0,                                   *
+               ATTRB=ASKIP
+         DFHMDF POS=(9,3),LENGTH=20,INITIAL='Field with comments.',    *
+               ATTRB=(ASKIP,NORM),HILIGHT=OFF,COLOR=GREEN
+INPUT    DFHMDF POS=(9,24),LENGTH=9,                                   *
+               ATTRB=(UNPROT,NORM),HILIGHT=UNDERLINE,COLOR=GREEN
+         DFHMDF POS=(12,1),LENGTH=47,                                  *
+               INITIAL='This is a sample of a complex array ....',     *
+               ATTRB=(ASKIP,NORM),HILIGHT=OFF,COLOR=GREEN
+* CPLXARRAY                       CPLXARRAY                            
+CPLXARRAY DFHMDF POS=(14,1),LENGTH=8,                                  *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+* CPLXARRAY                       CPLXARRAY                            
+DFHFLD   DFHMDF POS=(14,40),LENGTH=8,                                  *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+* CPLXARRAY                       CPLXARRAY                            
+DFHFLD1  DFHMDF POS=(15,1),LENGTH=8,                                   *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+* CPLXARRAY                       CPLXARRAY                            
+DFHFLD2  DFHMDF POS=(15,40),LENGTH=8,                                  *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+* CPLXARRAY                       CPLXARRAY                            
+DFHFLD3  DFHMDF POS=(16,1),LENGTH=8,                                   *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+* CPLXARRAY                       CPLXARRAY                            
+DFHFLD4  DFHMDF POS=(16,40),LENGTH=8,                                  *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+* CPLXARRAY                       CPLXARRAY                            
+DFHFLD5  DFHMDF POS=(17,1),LENGTH=8,                                   *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+* CPLXARRAY                       CPLXARRAY                            
+DFHFLD6  DFHMDF POS=(17,40),LENGTH=8,                                  *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+* CPLXARRAY                       CPLXARRAY                            
+DFHFLD7  DFHMDF POS=(18,1),LENGTH=8,                                   *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+* CPLXARRAY                       CPLXARRAY                            
+DFHFLD8  DFHMDF POS=(18,40),LENGTH=8,                                  *
+               JUSTIFY=(LEFT,BLANK),INITIAL='ARRAY',                   *
+               ATTRB=(PROT,NORM)
+         DFHMSD TYPE=FINAL                                              
+         END                                                            

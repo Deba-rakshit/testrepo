@@ -1,0 +1,38 @@
+CDATMAP  DFHMSD TYPE=&SYSPARM,MODE=INOUT,LANG=COBOL,                   X00080000
+               STORAGE=AUTO,TIOAPFX=YES,                               X00090005
+               DSATTS=(COLOR,HILIGHT),MAPATTS=(COLOR,HILIGHT)           00091005
+*       MENU MAP.                                                       00100000
+ADMENU  DFHMDI SIZE=(24,80),CTRL=(PRINT,FREEKB)                         00110000
+        DFHMDF POS=(5,12),ATTRB=(ASKIP,BRT),LENGTH=46,                 X00120000
+               INITIAL='ADTOOLS BIRTHDAY/RETIREMENT SAMPLE APPLICATION' 00130000
+MAPDAT  DFHMDF POS=(8,15),ATTRB=(UNPROT,NORM,IC),LENGTH=8,             X00160007
+               INITIAL='YYYYMMDD'                                       00170000
+        DFHMDF POS=(8,24),ATTRB=(PROT,ASKIP)                            00180000
+        DFHMDF POS=(8,26),ATTRB=(ASKIP,NORM),LENGTH=50,                X00140000
+               INITIAL='<== PLEASE ENTER BIRTHDATE IN YYYYMMDD FORMAT'  00150000
+MAPREQ  DFHMDF POS=(10,18),ATTRB=(UNPROT,NORM,FSET),LENGTH=1,          X00210000
+               INITIAL='B'                                              00220000
+        DFHMDF POS=(10,20),ATTRB=(PROT,ASKIP),LENGTH=1                  00230000
+REQMSG1 DFHMDF POS=(10,22),ATTRB=(PROT,NORM),LENGTH=45,                X00240000
+               INITIAL='<=== ENTER REQUEST'                             00250000
+REQMSG2 DFHMDF POS=(11,23),ATTRB=(PROT,NORM),LENGTH=25,                X00240000
+               INITIAL='B : SEE YOUR BIRTHDAY'                          00250000
+        DFHMDF POS=(11,55),ATTRB=(PROT,NORM),LENGTH=23,                X00240000
+               INITIAL='(LINK TO PROGRAM CDAT2)'                        00250000
+REQMSG3 DFHMDF POS=(12,23),ATTRB=(PROT,NORM),LENGTH=25,                X00240000
+               INITIAL='R : CALCULATE RETIREMENT'                       00250000
+        DFHMDF POS=(12,55),ATTRB=(PROT,NORM),LENGTH=23,                X00240000
+               INITIAL='   (CALL PROGRAM CDAT3)'                        00250000
+REQMSG4 DFHMDF POS=(13,23),ATTRB=(PROT,NORM),LENGTH=45,                X00260000
+               INITIAL='C : CLEAR AND START OVER'                       00270000
+REQMSG5 DFHMDF POS=(14,23),ATTRB=(PROT,NORM),LENGTH=45,                X00260000
+               INITIAL='@ : ABEND WITH S0C7'                            00270000
+MAPMSG1 DFHMDF POS=(16,10),ATTRB=(PROT,ASKIP),LENGTH=65                 00291300
+MAPMSG2 DFHMDF POS=(17,10),ATTRB=(PROT,ASKIP),LENGTH=65                 00291300
+MAPMSG3 DFHMDF POS=(18,10),ATTRB=(PROT,ASKIP),LENGTH=65                 00291300
+MAPMSG4 DFHMDF POS=(19,10),ATTRB=(PROT,ASKIP),LENGTH=65                 00291300
+MAPMSG5 DFHMDF POS=(20,10),ATTRB=(PROT,ASKIP),LENGTH=65                 00291300
+MSGOUT  DFHMDF POS=(23,10),ATTRB=(PROT,ASKIP),LENGTH=65,               X00320000
+               INITIAL='F3/F12/CLEAR TO TERMINATE, ENTER TO PROCESS'    00330000
+        DFHMSD TYPE=FINAL                                               00360000
+        END                                                             00370000

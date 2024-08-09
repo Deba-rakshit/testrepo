@@ -1,0 +1,48 @@
+ EBUDP2: PROC (PARM_STRING) OPTIONS(REENTRANT,FETCHABLE) REORDER;       00010005
+     /**********************************************************/       00020002
+     /*    THIS IS A CALLED PROGRAM EXAMPLE FOR EBU 2004       */       00030002
+     /*                                                        */       00040002
+     /*    THIS PROGRAM WILL BE CALLED BY ANOTHER, RECEIVE A   */       00050002
+     /*    DATE(YYYYMMDD) AND DETERMINE THE NUMBER OF DAYS     */       00060002
+     /*    SINCE CURRENT DATE.                                 */       00070002
+     /*                                                        */       00080002
+     /*    (C) 2003 IBM - KEVIN J. CUMMINGS RESERVED.          */       00090002
+     /*        TRANSALATED TO PL/1 BY ALAN SCHWARTZ   OCT 2006 */       00100002
+     /**********************************************************/       00110002
+    DCL PARM_STRING CHAR(21);                                           00120005
+    DCL INTERFACE_AREA_STRING CHAR(21);                                 00130002
+    DCL 01 INTERFACE_AREA BASED(ADDR(INTERFACE_AREA_STRING)),           00140002
+           05 L_INPUT_DATE,                                             00150002
+              10 L_YYYY  PIC '(4)9',                                    00160002
+              10 L_MM    PIC '(2)9',                                    00170002
+              10 L_DD    PIC '(2)9',                                    00180002
+           05 L_DAY_DIFFERENCE  PIC '(9)9',                             00190002
+           05 L_PROGRAM_RETCODE PIC '(4)9';                             00200002
+                                                                        00210002
+    DCL W_INPUT_DATE         PIC '(8)9' BASED(ADDR(L_INPUT_DATE));      00220002
+    DCL W_INPUT_DATE_INT     PIC '(9)9';                                00230002
+                                                                        00240002
+    DCL W_CURRENT_DATE       PIC '(8)9';                                00250002
+    DCL W_CURRENT_DATE_INT   PIC '(9)9';                                00260002
+                                                                        00270002
+    DCL W_DAY_DIFFERENCE     PIC '(9)9';                                00280002
+                                                                        00290002
+     INTERFACE_AREA_STRING = PARM_STRING;                               00291005
+     CALL A100_OBTAIN_CURRENT_DATE;                                     00300002
+     CALL A200_CALCULATE_DAY_DIFFERENCE;                                00310002
+     PARM_STRING = INTERFACE_AREA_STRING;                               00311005
+                                                                        00320002
+   A100_OBTAIN_CURRENT_DATE: PROC;                                      00330002
+       W_CURRENT_DATE = DATETIME('YYYYMMDD');                           00340002
+       W_CURRENT_DATE_INT = DAYS(W_CURRENT_DATE,'YYYYMMDD');            00350002
+   END A100_OBTAIN_CURRENT_DATE;                                        00360002
+                                                                        00370002
+   A200_CALCULATE_DAY_DIFFERENCE: PROC;                                 00380002
+       W_INPUT_DATE_INT = DAYS(W_INPUT_DATE,'YYYYMMDD');                00390002
+                                                                        00400002
+       W_DAY_DIFFERENCE = W_CURRENT_DATE_INT - W_INPUT_DATE_INT;        00410002
+                                                                        00420002
+       L_DAY_DIFFERENCE = W_DAY_DIFFERENCE;                             00430002
+       L_PROGRAM_RETCODE = 0;                                           00440002
+   END A200_CALCULATE_DAY_DIFFERENCE;                                   00450002
+ END EBUDP2;                                                            00460002

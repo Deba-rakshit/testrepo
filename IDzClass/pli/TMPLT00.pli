@@ -1,0 +1,212 @@
+ TMPLT00 : Procedure (MYARGS ) options (main) ;
+   dcl MYARGS CHAR(100) VARYING;
+   dcl a char(100) varying;
+   dcl sourcefn char(100) varying init("");
+   dcl xmlfn char(100) varying init("");
+   dcl outfn char(100) varying init("");
+   dcl fragin file record input;
+   dcl xin file record input;
+   dcl xout file record output;
+   dcl eof bit(1) init('0'b);
+   dcl copyeof bit(1) init('0'b);
+   dcl copyerr bit(1) init('0'b);
+
+   dcl dsn char(255)varying init("");
+   dcl fn char(255)varying init("");
+   dcl fileattrs char(100)varying init("");
+
+   dcl ZFLDATA ext('ZFLDATA')
+        entry( char(255) varyingz byaddr,
+               char(255) varyingz byaddr,
+               char(100) varyingz byaddr )
+        returns( byvalue fixed bin(31) )
+        options ( nodescriptor );
+
+   /*
+   dcl ZFLDATA ext('ZFLDATA')
+        entry( ptr byvalue,
+               ptr byvalue,
+               ptr byvalue)
+        returns( byvalue fixed bin(31) )
+        options ( nodescriptor );
+     */
+   /************************************/
+   /*DATA STRUCTURES FOR XML FILE      */
+   /************************************/
+   dcl 1 resourceNode BASED (resourceHead),
+         2 fileName char(100) varying,
+         2 fileNum  fixed bin(15),
+         2 nextResource ptr;
+   dcl resourceHead ptr;
+   dcl rc fixed bin(5);
+
+   dcl 1 stmtTblNode BASED (stmtTblHead),
+         2 oln fixed bin(15),
+         2 ofn fixed bin(15),
+         2 iln fixed bin(15),
+         2 ifn fixed bin(15),
+         2 nextStmt  ptr;
+   dcl 1 stmtTblHead ptr;
+
+   dcl 1 errorMsgNode BASED (errorMsgHead),
+         2  errfileNum fixed bin(15),
+         2  errStmtNum fixed bin(15),
+         2  errMsgID   char(8) varying,
+         2  errMsgTxt  char(200) varying,
+         2  nextErr    ptr;
+   dcl 1 errorMsgHead ptr;
+
+   dcl (pfn, pfileattrs, pdsn) ptr;
+   /***********************************/
+   /* on units                        */
+   /***********************************/
+   on endfile(xin) eof = '1'b;
+   on endfile(fragin) copyeof = '1'b;
+   /*************************************/
+   /* open files                        */
+   /*************************************/
+   /* call processParms; */
+   /*************************************/
+   /* open files                        */
+   /*************************************/
+   /*open file(xin) title('/C:\SEQSAVE\DATA\STARTAPP.CBL');*/
+   /*open file(xout) title('/C:\SEQSAVE\DATA\STARTAPP.OUT');*/
+
+   /* open file(xin) title('/'||sourcefn); */
+   /* open file(xout) title('/'||outfn);   */
+   /* int getFileData(char * dsn, char *fn, char *fileattrs)*/
+   fn = "DD:XIN";
+   fileattrs = "rb+,type=record";
+
+   pfn = addr(fn);
+   pfileattrs = addr(fileattrs);
+   pdsn = addr(dsn);
+
+   rc =   ZFLDATA(dsn, fn, fileattrs);
+   display("DSN = "||DSN);
+   open file(xin);
+   open file(xout);
+
+   /*************************************/
+   /* process source file               */
+   /*************************************/
+   read file(xin) into(a);
+   do while( eof = '0'b );
+     call processLine;
+     read file(xin) into(a);
+   end;
+   close file(XIN);
+   close file(XOUT);
+   DISPLAY (MYARGS);
+   display (getenv('PATH'));
+
+
+
+
+   /***************************************************/
+   /* Show the configuration of the 3 towers.         */
+   /***************************************************/
+   processParms: proc;
+      dcl xmlstart fixed bin(31);
+      dcl xmlend   fixed bin(31);
+      dcl xmlfnlen fixed bin(31);
+      dcl outfnstart fixed bin(31);
+      dcl outfnend fixed bin(31);
+      dcl outfnlen fixed bin(31);
+      dcl fntest1 char(100) varying;
+      DCL filename2 char(10) varying init('filename');
+      xmlstart = INDEX(MYARGS,'XML(',1);
+      xmlend = INDEX(MYARGS,')',xmlstart);
+      xmlfnlen = xmlend - xmlstart;
+      xmlfnlen = xmlfnlen - 4;
+
+      outfnstart = INDEX(MYARGS,'OUT(',1);
+      outfnend = INDEX(MYARGS,')',outfnstart);
+      outfnlen = outfnend - outfnstart;
+      outfnlen = outfnlen - 4;
+
+      sourcefn = SUBSTR(MYARGS,1,xmlstart - 2);
+      xmlfn = SUBSTR(MYARGS,(xmlstart+4),xmlfnlen);
+      outfn = SUBSTR(MYARGS,(outfnstart+4),outfnlen);
+
+      display('sourcefn = '||sourcefn);
+      display('xmlfn = '||xmlfn);
+      display('outfn = '||outfn);
+   end processParms;
+   /***************************************************/
+   /* Show the configuration of the 3 towers.         */
+   /***************************************************/
+   processLine: proc;
+      dcl fraglen fixed bin(31);
+      fraglen = LENGTH("FRAGMENT");
+      display(a);
+      IF SUBSTR(a,1,fraglen) = "FRAGMENT"  THEN
+      DO;
+        call processFragment;
+      END;
+      ELSE
+      DO;
+          write file(xout) from(a);
+      END;
+
+   end processLine;
+   /***************************************************/
+   /* Show the configuration of the 3 towers.         */
+   /***************************************************/
+   processFragment: proc;
+      dcl pos fixed bin(31);
+      dcl fragname char (100) varying;
+      pos = index( a, ';', 1 );
+      fragname = substr(a,10,(pos - 10));
+      open file(fragin) title('/'||fragname);
+      if copyerr = '0'b then
+      do;
+        read file(fragin) into(a);
+        do while( copyeof = '0'b );
+           write file(xout) from(a);
+           read file(fragin) into(a);
+        end;
+        close file(fragin);
+      end;
+      else
+      do;
+           DISPLAY ("FILE NOT FOUND ERROR!!");
+           copyerr = '0'b;
+      end;
+
+   end processFragment;
+   /***************************************************/
+   /* Show the configuration of the 3 towers.         */
+   /***************************************************/
+   saveError: proc;
+
+     dcl jx            fixed bin(31);
+
+     put skip list( '' );
+
+   end saveError;
+   /***************************************************/
+   /* Show the configuration of the 3 towers.         */
+   /***************************************************/
+   storeStmtTbl: proc;
+
+     dcl jx            fixed bin(31);
+
+     put skip list( '' );
+
+   end storeStmtTbl;
+
+   /***************************************************/
+   /* Show the configuration of the 3 towers.         */
+   /***************************************************/
+   write_XML: proc;
+
+     dcl jx            fixed bin(31);
+
+     put skip list( '' );
+
+
+   end write_XML;
+
+
+ End  TMPLT00 ;

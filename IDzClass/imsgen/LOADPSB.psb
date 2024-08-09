@@ -1,0 +1,10 @@
+         PRINT NOGEN                                                        0000
+         PCB TYPE=TP,MODIFY=YES                                               00
+         PCB TYPE=DB,DBDNAME=PARTSUPP,KEYLEN=34,PROCOPT=L                     00
+         SENSEG NAME=VPARTSEG,PARENT=0                                        00
+         NSEG NAME=VSUPPSEG,PARENT=VPARTSEG                                000
+         SENSEG NAME=VADDRSEG,PARENT=VSUPPSEG
+         SENSEG NAME=VPOSEG,PARENT=VSUPPSEG
+   PSBGEN LANG=COBOL,PSBNAME=LOADPSB,CMPAT=YES
+   END                                                                        00
+

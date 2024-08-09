@@ -1,0 +1,77 @@
+ PTM01C:PROC;
+ /********************************************************************/
+ /*                                                                  */
+ /* PROGRAM: PTM01C                                                  */
+ /*                                                                  */
+ /* FUNCTION: DEMO OF DEBUG TOOL FOR A PLI APPLCATION                */
+ /*                                                                  */
+ /* WRITER: TIMOTHY DAVID MAGEE                                      */
+ /*         LEXINGTON, KENTUCKY                                      */
+ /*                                                                  */
+ /* DATE: 12/28/2005                                                 */
+ /*                                                                  */
+ /* PROCESS:                                                         */
+ /*         THIS IS A CALLED SUBROUTINE PASSING A PARM. AN INTERNAL  */
+ /*         SUBROUTINE IS CALLED AND VAR VALUES ARE CONTROLED.       */
+ /*                                                                  */
+ /********************************************************************/
+
+ /********************************************************************/
+ /*  DATA DECLARATIONS                                               */
+ /********************************************************************/
+ DCL TMPARM1 FIXED BIN(31) INIT(1);
+ DCL TMPARM2 FIXED BIN(31) INIT(2);
+ DCL TMPARM3 FIXED BIN(31) INIT(1);
+ DCL VALUE   FIXED BIN(31) INIT(1);
+ DCL RESULT  FIXED BIN(31) INIT(0);
+ DCL PARM_YEAR PIC '99';
+ DCL PTM01D EXTERNAL ENTRY;
+
+   DCL 1 PRODUCT_RECORD,
+         2 PRODUCT_KEY,
+           3 PR_CUST_ID       CHAR(5),
+           3 PR_RECORD_TYPE   CHAR(1),
+           3 PRODUCT_ID       CHAR(7),
+         2 PRODUCT_NAME       CHAR(25),
+         2 DATE_PURCHASED     CHAR(10),
+         2 SERVICE_CALLS      FIXED BINARY(15,0) UNALIGNED,
+         2 LAST_SERVICE_CALL  CHAR(10),
+         2 RECORD_FILL        CHAR(20);
+ /********************************************************************/
+ /*  MAINLINE LOGIC                                                  */
+ /********************************************************************/
+   IF (TMPARM1 = 0 ) THEN
+   DO;
+      CALL PTM01D(PARM_YEAR);
+   END;
+
+ DCL TRANS_IN_PRODKEY  CHAR(8);
+ DCL NUM_PRODUCT_RECS  BIN;
+
+    IF ( PRODUCT_KEY  = TRANS_IN_PRODKEY )  THEN  DO;
+             NUM_PRODUCT_RECS = NUM_PRODUCT_RECS + 1;
+             END;
+   IF (TMPARM2 = 2) THEN
+     CALL PROC1(TMPARM2);
+
+   DO WHILE (TMPARM2 > 100);
+     TMPARM2 = TMPARM2 - 1;
+   END;
+
+   IF (TMPARM3 = 0) THEN
+     RESULT = VALUE / TMPARM3 ;
+
+ /********************************************************************/
+ /*  PROCEEDURE: PROC1                                               */
+ /********************************************************************/
+ PROC1: PROCEDURE(TMPARM1);
+   DCL TMPARM1 FIXED BIN(31);
+
+   TMPARM1 = 10;
+   IF (TMPARM1 = 0 ) THEN
+   DO;
+      CALL PTM01D(PARM_YEAR);
+   END;
+   END PROC1;
+
+ END PTM01C;

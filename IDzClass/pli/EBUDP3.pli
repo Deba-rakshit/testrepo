@@ -1,0 +1,100 @@
+ EBUDP3: PROC (PARM_STRING) OPTIONS(REENTRANT,FETCHABLE) REORDER;       00010004
+     /********************************************************/         00020004
+     /*    THIS IS A SAMPLE PROGRAM FOR EBU 2004             */         00030004
+     /*                                                      */         00040004
+     /*    THIS PROGRAM WILL BE CALLED BY ANOTHER, RECEIVE A */         00050004
+     /*    DATE(YY/MM/DD) AND DETERMINE A PROPER FORMATTED   */         00060004
+     /*    RETIREMENT DATE.                                  */         00070004
+     /*                                                      */         00080004
+     /*    (C) 2004 IBM - KEVIN J. CUMMINGS RESERVED.        */         00090004
+     /*        translated to pl/1 by Alan schwartz  Oct 2006 */         00100004
+     /********************************************************/         00110004
+   DCL PARM_STRING CHAR(94);                                            00120004
+                                                                        00130004
+   DCL CEEDAYS EXTERNAL ENTRY OPTIONS(ASSEMBLER);                       00140004
+   DCL CEEDATE EXTERNAL ENTRY OPTIONS(ASSEMBLER);                       00150004
+                                                                        00160004
+   DCL INTERFACE_AREA_STRING  CHAR(94);                                 00170004
+   DCL 01 INTERFACE_AREA based(addr(interface_area_string)),            00190006
+          05 L_RETIREMENT_YEAR     PIC '(10)x',                         00200005
+          05 L_RETIREMENT_DATE     PIC '(80)x',                         00210005
+          05 L_PROGRAM_RETCODE     PIC '(4)9';                          00220005
+                                                                        00230004
+   DCL LILIAN                            FIXED BIN(31);                 00240004
+   DCL CHRDATE                           CHAR(80);                      00250004
+                                                                        00260004
+   DCL IN_DATE CHAR(255) VARYING;                                       00270004
+                                                                        00280004
+   DCL PICSTR CHAR(255) VARYING;                                        00290004
+                                                                        00300004
+   DCL 01 FC,                                                           00310004
+       10  FC_SEV         FIXED BIN(15) init(0),                        00320004
+       10  FC_MSG         FIXED BIN(15) init(0),                        00330004
+       10  FC_FLAGS,                                                    00340004
+           15 FC_CASE     BIT(2),                                       00350004
+           15 FC_SEVERITY BIT(3),                                       00360004
+           15 FC_CONTROL  BIT(3),                                       00370004
+       10  FC_FAC         CHAR(3),                                      00380004
+       10  FC_ISI         FIXED BIN(31);                                00390004
+                                                                        00400004
+                                                                        00410004
+     INTERFACE_AREA_STRING = PARM_STRING;                               00420004
+     L_PROGRAM_RETCODE = 0;                                             00430004
+     CALL A100_DETERMINE_RETIREMENT;                                    00440004
+     IF (L_PROGRAM_RETCODE = 0) THEN DO;                                00450004
+         CALL A200_FORMAT_DATE;                                         00460004
+     END;                                                               00470004
+     PARM_STRING = INTERFACE_AREA_STRING;                               00480004
+                                                                        00490004
+   A100_DETERMINE_RETIREMENT: PROC;                                     00500004
+     /*************************************************/                00510004
+     /** CALL CEEDAYS TO CONVERT THE RETIREMENT DATE **/                00520004
+     /** TO  LILIAN REPRESENTATION                   **/                00530004
+     /*************************************************/                00540004
+           IN_DATE = L_RETIREMENT_YEAR;                                 00550004
+           IF (SUBSTR(IN_DATE,6,5) = '02/29') THEN DO;                  00551007
+               SUBSTR(IN_DATE,6,5) = '02/28';                           00552007
+           END;                                                         00553007
+           PICSTR = 'YYYY/MM/DD';                                       00560004
+           CALL CEEDAYS(IN_DATE, PICSTR, LILIAN, FC);                   00570004
+                                                                        00580004
+                                                                        00590004
+     /*************************************************/                00600004
+     /** IF CEEDAYS RUNS SUCCESSFULLY, DISPLAY RESULT**/                00610004
+     /*************************************************/                00620004
+           IF (FC_SEV = 0) THEN DO;                                     00630004
+               PUT SKIP LIST(IN_DATE, ' IS LILIAN DAY: ', LILIAN);      00640004
+           END;                                                         00650004
+           ELSE DO;                                                     00660004
+               PUT SKIP LIST('CEEDAYS FAILED WITH MSG ', FC_MSG);       00670004
+               L_PROGRAM_RETCODE = 999;                                 00680004
+           END;                                                         00690004
+   END A100_DETERMINE_RETIREMENT;                                       00700004
+                                                                        00710004
+   A200_FORMAT_DATE: PROC;                                              00720004
+     /*************************************************/                00730004
+     /** SPECIFY PICTURE STRING THAT DESCRIBES THE   **/                00740004
+     /**  DESIRED FORMAT OF THE OUTPUT FROM CEEDATE, **/                00750004
+     /**  AND THE PICTURE STRING'S LENGTH.           **/                00760004
+     /*************************************************/                00770004
+           PICSTR = 'WWWWWWWWWWZ , ZD MMMMMMMMMMMMMMZ YYYY';            00780004
+                                                                        00790004
+     /*************************************************/                00800004
+     /** CALL CEEDATE TO CONVERT THE LILIAN DATE     **/                00810004
+     /**     TO  A PICTURE STRING.                   **/                00820004
+     /*************************************************/                00830004
+           CALL CEEDATE(LILIAN, PICSTR, CHRDATE, FC);                   00840004
+                                                                        00850004
+                                                                        00860004
+     /*************************************************/                00870004
+     /** IF CEEDATE RUNS SUCCESSFULLY, DISPLAY RESULT**/                00880004
+     /*************************************************/                00890004
+           IF (FC_SEV = 0)  THEN DO;                                    00900004
+               L_RETIREMENT_DATE = CHRDATE;                             00910004
+           END;                                                         00920004
+           ELSE DO;                                                     00930004
+               PUT SKIP LIST('CEEDAYS FAILED WITH MSG ', FC_MSG);       00940004
+               L_PROGRAM_RETCODE = 999;                                 00950004
+           END;                                                         00960004
+   END A200_FORMAT_DATE;                                                00970004
+ END EBUDP3;                                                            00980005

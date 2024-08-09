@@ -1,0 +1,139 @@
+ /*
+ * PLI Stored Procedure SAMPLE.PLISAMP
+ * @param Action
+ * @param City
+ * @param Country
+ * @param Response
+ */
+
+PLISAMP : Procedure ( Action   ,
+                       City     ,
+                       Country  ,
+                       Response ) options (main);
+
+ dcl Action   CHAR  (8) VAR;
+ dcl City     CHAR (32) VAR;
+ dcl Country  CHAR (32) VAR;
+ dcl Response CHAR (80) VAR;
+
+ dcl Sqlcode_Pic PIC'SSS999';
+
+ DCL 1 SQLCAP,
+      2 SQLCAPID      CHAR(8),
+      2 SQLCAPBC      BIN FIXED(31),
+      2 SQLCODE      BIN FIXED(31),
+      2 SQLERRM      CHAR(70) VAR,
+      2 SQLERRP      CHAR(8),
+      2 SQLERRD(6)   BIN FIXED(31),
+      2 SQLWARN,
+        3 SQLWARN0   CHAR(1),
+        3 SQLWARN1   CHAR(1),
+        3 SQLWARN2   CHAR(1),
+        3 SQLWARN3   CHAR(1),
+        3 SQLWARN4   CHAR(1),
+        3 SQLWARN5   CHAR(1),
+        3 SQLWARN6   CHAR(1),
+        3 SQLWARN7   CHAR(1),
+        3 SQLWARN8   CHAR(1),
+        3 SQLWARN9   CHAR(1),
+        3 SQLWARNA   CHAR(1),
+      2 SQLSTATE     CHAR(5);
+
+ Action=TRANSLATE(Action,'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                         'abcdefghijklmnopqrstuvwxyz');
+
+ select (Action);
+   when ('S','SELECT') do;
+     Select;
+       When (City='' & Country='') do;
+         EXEC SQL
+           DECLARE C1 CURSOR WITH RETURN WITH HOLD FOR
+             SELECT * FROM SAMPLE.CITYTABLE
+         ;
+         EXEC SQL
+           OPEN C1
+         ;
+       end;
+       When (City='') do;
+         EXEC SQL
+           DECLARE C2 CURSOR WITH RETURN WITH HOLD FOR
+             SELECT * FROM SAMPLE.CITYTABLE
+               WHERE COUNTRY=:COUNTRY
+         ;
+         EXEC SQL
+           OPEN C2
+         ;
+       end;
+       When (Country='') do;
+         EXEC SQL
+           DECLARE C3 CURSOR WITH RETURN WITH HOLD FOR
+             SELECT * FROM SAMPLE.CITYTABLE
+               WHERE CITY=:CITY
+         ;
+         EXEC SQL
+           OPEN C3
+         ;
+       end;
+       Otherwise do;
+         EXEC SQL
+           DECLARE C4 CURSOR WITH RETURN WITH HOLD FOR
+             SELECT * FROM SAMPLE.CITYTABLE
+               WHERE CITY=:CITY AND COUNTRY=:COUNTRY
+         ;
+         EXEC SQL
+           OPEN C4
+         ;
+       end;
+     end;
+     if Sqlcode=0 then Response='Select successful';
+     else do;
+       Sqlcode_Pic = Sqlcode;
+       Response='Select unsuccessful: Sqlcode '||Sqlcode_Pic;
+     end;
+   end;
+   when ('I','INSERT') do;
+     Select;
+       When (City='' & Country='')
+         Response='Insert unsuccessful: City and Country not specified';
+       When (City='')
+         Response='Insert unsuccessful: City not specified';
+       When (Country='')
+         Response='Insert unsuccessful: Country not specified';
+       Otherwise do;
+         EXEC SQL
+           INSERT INTO SAMPLE.CITYTABLE
+             (CITY, COUNTRY) VALUES (:CITY, :COUNTRY)
+         ;
+         if Sqlcode=0 then Response='Insert successful';
+         else do;
+           Sqlcode_Pic = Sqlcode;
+           Response='Insert unsuccessful: Sqlcode '||Sqlcode_Pic;
+         end;
+       end;
+     end;
+   end;
+   when ('D','DELETE') do;
+     Select;
+       When (City='' & Country='')
+         Response='Delete unsuccessful: City and Country not specified';
+       When (City='')
+         Response='Delete unsuccessful: City not specified';
+       When (Country='')
+         Response='Delete unsuccessful: Country not specified';
+       Otherwise do;
+         EXEC SQL
+           DELETE FROM SAMPLE.CITYTABLE
+             WHERE CITY=:CITY AND COUNTRY=:COUNTRY
+         ;
+         if Sqlcode=0 then Response='Delete successful';
+         else do;
+           Sqlcode_Pic = Sqlcode;
+           Response='Delete unsuccessful: Sqlcode '||Sqlcode_Pic;
+         end;
+       end;
+     end;
+   end;
+   otherwise Response='Action "'||Action||'" not supported';
+ end;
+
+ END PLISAMP;

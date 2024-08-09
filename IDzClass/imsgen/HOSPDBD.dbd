@@ -1,0 +1,243 @@
+*   DBDGEN
+       PRINT NOGEN
+   DBD      NAME=DEDBJN21,                                             C
+               ACCESS=(PHDAM,OSAM),                                    C
+               RMNAME=(DFSHDC20,3,3,25),                               C
+               PASSWD=NO
+***********************************************************************
+***********************************************************************
+*        SEGMENT NUMBER 1
+***********************************************************************
+    SEGM    NAME=HOSPITAL,                                             C
+               PARENT=0,                                               C
+               BYTES=(900),                                            C
+               RULES=(LLL,HERE)
+      FIELD NAME=(HOSPCODE,SEQ,U),                                     C
+               START=3,                                                C
+               BYTES=12,                                               C
+               TYPE=C
+      FIELD NAME=(HOSPNAME),                                           C
+               START=15,                                               C
+               BYTES=17,                                               C
+               TYPE=C
+      FIELD NAME=(HOSPLL),                                             C
+               START=1,                                                C
+               BYTES=2,                                                C
+               TYPE=X
+***********************************************************************
+*        SEGMENT NUMBER 2
+***********************************************************************
+    SEGM    NAME=PAYMENTS,                                             C
+               PARENT=HOSPITAL,                                        C
+               BYTES=(900),                                            C
+               TYPE=DIR,                                               C
+               RULES=(LLL,FIRST)
+      FIELD NAME=(PATMLL),                                             C
+               START=1,                                                C
+               BYTES=2,                                                C
+               TYPE=X
+      FIELD NAME=(PATNUM),                                             C
+               START=3,                                                C
+               BYTES=4,                                                C
+               TYPE=C
+      FIELD NAME=(AMOUNT),                                             C
+               START=7,                                                C
+               BYTES=8,                                                C
+               TYPE=C
+***********************************************************************
+*        SEGMENT NUMBER 3
+***********************************************************************
+    SEGM    NAME=WARD,                                                 C
+               PARENT=HOSPITAL,                                        C
+               BYTES=(900),                                            C
+               TYPE=DIR,                                               C
+               RULES=(LLL,HERE)
+      FIELD NAME=(WARDNO,SEQ,U),                                       C
+               START=3,                                                C
+               BYTES=4,                                                C
+               TYPE=C
+      FIELD NAME=(WARDNAME),                                           C
+               START=7,                                                C
+               BYTES=15,                                               C
+               TYPE=C
+      FIELD NAME=(PATCOUNT),                                           C
+               START=22,                                               C
+               BYTES=4,                                                C
+               TYPE=C
+      FIELD NAME=(NURCOUNT),                                           C
+               START=26,                                               C
+               BYTES=4,                                                C
+               TYPE=P
+      FIELD NAME=(DOCCOUNT),                                           C
+               START=30,                                               C
+               BYTES=2,                                                C
+               TYPE=C
+      FIELD NAME=(WARDLL),                                             C
+               START=1,                                                C
+               BYTES=2,                                                C
+               TYPE=X
+***********************************************************************
+*        SEGMENT NUMBER 4
+***********************************************************************
+    SEGM    NAME=PATIENT,                                              C
+               PARENT=WARD,                                            C
+               BYTES=(900),                                            C
+               TYPE=DIR,                                               C
+               RULES=(LLL,HERE)
+      FIELD NAME=(PATNUM,SEQ,U),                                       C
+               START=3,                                                C
+               BYTES=4,                                                C
+               TYPE=C
+      FIELD NAME=(PATNAME),                                            C
+               START=7,                                                C
+               BYTES=20,                                               C
+               TYPE=C
+      FIELD NAME=(BIRTHDTE),                                           C
+               START=27,                                               C
+               BYTES=10,                                               C
+               TYPE=C
+      FIELD NAME=(SEX),                                                C
+               START=37,                                               C
+               BYTES=5,                                                C
+               TYPE=C
+      FIELD NAME=(PATLL),                                              C
+               START=1,                                                C
+               BYTES=2,                                                C
+               TYPE=X
+***********************************************************************
+*        SEGMENT NUMBER 5
+***********************************************************************
+    SEGM    NAME=ILLNESS,                                              C
+               PARENT=PATIENT,                                         C
+               BYTES=(900),                                            C
+               TYPE=DIR,                                               C
+               RULES=(LLL,HERE)
+      FIELD NAME=(ILLLL),                                              C
+               START=1,                                                C
+               BYTES=2,                                                C
+               TYPE=X
+      FIELD NAME=(ILLNAME),                                            C
+               START=3,                                                C
+               BYTES=15,                                               C
+               TYPE=C
+***********************************************************************
+*        SEGMENT NUMBER 6
+***********************************************************************
+    SEGM    NAME=TREATMNT,                                             C
+               PARENT=ILLNESS,                                         C
+               BYTES=(900),                                            C
+               TYPE=DIR,                                               C
+               RULES=(LLL,HERE)
+      FIELD NAME=(TREATLL),                                            C
+               START=1,                                                C
+               BYTES=2,                                                C
+               TYPE=X
+      FIELD NAME=(TREATDAY),                                           C
+               START=3,                                                C
+               BYTES=8,                                                C
+               TYPE=P
+      FIELD NAME=(TREATMNT),                                           C
+               START=11,                                               C
+               BYTES=15,                                               C
+               TYPE=C
+      FIELD NAME=(COMMENTS),                                           C
+               START=26,                                               C
+               BYTES=22,                                               C
+               TYPE=C
+***********************************************************************
+*        SEGMENT NUMBER 7
+***********************************************************************
+    SEGM    NAME=DOCTOR,                                               C
+               PARENT=TREATMNT,                                        C
+               BYTES=(900),                                            C
+               TYPE=DIR,                                               C
+               RULES=(LLL,HERE)
+      FIELD NAME=(DOCLL),                                              C
+               START=1,                                                C
+               BYTES=2,                                                C
+               TYPE=X
+      FIELD NAME=(DOCTNO),                                             C
+               START=3,                                                C
+               BYTES=4,                                                C
+               TYPE=C
+      FIELD NAME=(DOCNAME),                                            C
+               START=7,                                                C
+               BYTES=20,                                               C
+               TYPE=C
+***********************************************************************
+*        SEGMENT NUMBER 8
+***********************************************************************
+    SEGM    NAME=BILLING,                                              C
+               PARENT=PATIENT,                                         C
+               BYTES=(200),                                            C
+               TYPE=DIR,                                               C
+               RULES=(LLL,HERE)
+      FIELD NAME=(AMOUNT),                                             C
+               START=3,                                                C
+               BYTES=8,                                                C
+               TYPE=C
+      FIELD NAME=(COMMENTS),                                           C
+               START=11,                                               C
+               BYTES=20,                                               C
+               TYPE=C
+***********************************************************************
+*        SEGMENT NUMBER 9 - IT6 PHARMACY - New Segment
+***********************************************************************
+    SEGM    NAME=PHARMACY,                                             C
+               PARENT=HOSPITAL,                                        C
+               BYTES=(900),                                            C
+               RULES=(LLL,HERE)
+      FIELD NAME=(ORDNO,SEQ,U),                                        C
+               START=3,                                                C
+               BYTES=8,                                                C
+               TYPE=C
+      FIELD NAME=(ORDDATE),                                            C
+               START=11,                                               C
+               BYTES=10,                                               C
+               TYPE=C
+      FIELD NAME=(ORDPRICE),                                           C
+               START=21,                                               C
+               BYTES=10,                                               C
+               TYPE=C
+      FIELD NAME=(ORDQTY),                                             C
+               START=31,                                               C
+               BYTES=10,                                               C
+               TYPE=C
+      FIELD NAME=(CUSTNAME),                                           C
+               START=41,                                               C
+               BYTES=20,                                               C
+               TYPE=C
+      FIELD NAME=(DRUGNAME),                                           C
+               START=61,                                               C
+               BYTES=20,                                               C
+               TYPE=C
+      FIELD NAME=(PHARNAME),                                           C
+               START=81,                                               C
+               BYTES=20,                                               C
+               TYPE=C
+      FIELD NAME=(PHARLL),                                             C
+               START=1,                                                C
+               BYTES=2,                                                C
+               TYPE=X
+***********************************************************************
+*        SEGMENT NUMBER 10- IT6 BACKORDR - New Segment,PARENT=PHARMACY*
+***********************************************************************
+    SEGM    NAME=BACKORDR,                                             C
+               PARENT=PHARMACY,                                        C
+               BYTES=(900),                                            C
+               RULES=(LLL,HERE)
+      FIELD NAME=(DRUGNAME),                                           C
+               START=3,                                                C
+               BYTES=20,                                               C
+               TYPE=C
+      FIELD NAME=(BACKORDR),                                           C
+               START=23,                                               C
+               BYTES=8,                                                C
+               TYPE=C
+      FIELD NAME=(BACKLL),                                             C
+               START=1,                                                C
+               BYTES=2,                                                C
+               TYPE=X
+    DBDGEN
+    FINISH
+    END

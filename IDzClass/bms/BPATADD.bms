@@ -1,0 +1,112 @@
+BADD400  DFHMSD TYPE=&SYSPARM,                                         X
+               LANG=COBOL,                                             X
+               MODE=INOUT,                                             X
+               TIOAPFX=YES
+BADD400  DFHMDI SIZE=(24,80),                                          *
+               COLUMN=1,                                               *
+               LINE=1
+         DFHMDF POS=(02,65),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=005,                                             X
+               INITIAL='DATE:'
+DATE     DFHMDF POS=(02,71),                                           X
+               ATTRB=(ASKIP,FSET),                                     X
+               LENGTH=008
+         DFHMDF POS=(03,65),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=005,                                             X
+               INITIAL='TIME:'
+TIME     DFHMDF POS=(03,71),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=008
+         DFHMDF POS=(04,34),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=015,                                             X
+               INITIAL='RECORD ADDITION'
+         DFHMDF POS=(06,04),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=014,                                             X
+               INITIAL='PERSON NUMBER:'
+PERSONN  DFHMDF POS=(06,19),                                           X
+               ATTRB=(UNPROT,IC),                                      X
+               LENGTH=010
+         DFHMDF POS=(06,30),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=001
+         DFHMDF POS=(08,04),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=011,                                             X
+               INITIAL='FIRST NAME:'
+FNAME    DFHMDF POS=(08,16),                                           X
+               ATTRB=(UNPROT),                                         X
+               LENGTH=012
+         DFHMDF POS=(08,29),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=001
+         DFHMDF POS=(8,54),LENGTH=0,                                   *
+               ATTRB=ASKIP
+         DFHMDF POS=(10,04),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=010,                                             X
+               INITIAL='LAST NAME:'
+LNAME    DFHMDF POS=(10,15),                                           X
+               ATTRB=(UNPROT),                                         X
+               LENGTH=015
+         DFHMDF POS=(10,31),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=001
+         DFHMDF POS=(12,04),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=007,                                             X
+               INITIAL='STREET:'
+STREET   DFHMDF POS=(12,12),                                           X
+               ATTRB=(UNPROT),                                         X
+               LENGTH=016
+         DFHMDF POS=(12,29),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=001
+         DFHMDF POS=(14,4),LENGTH=5,INITIAL='CITY:',                   *
+               ATTRB=ASKIP
+CITY     DFHMDF POS=(14,10),                                           X
+               ATTRB=(UNPROT),                                         X
+               LENGTH=012
+         DFHMDF POS=(14,23),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=001
+         DFHMDF POS=(14,30),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=006,                                             X
+               INITIAL='STATE:'
+STATE    DFHMDF POS=(14,37),                                           X
+               ATTRB=(UNPROT),                                         X
+               LENGTH=002
+         DFHMDF POS=(14,40),                                           X
+               ATTRB=(ASKIP),                                          X
+               LENGTH=001
+* Phone number field
+         DFHMDF POS=(16,4),LENGTH=6,INITIAL='PHONE:',                  *
+               ATTRB=(ASKIP,NORM),HILIGHT=OFF,COLOR=DEFAULT
+* Phone # input
+PHONE    DFHMDF POS=(16,11),LENGTH=14,INITIAL='(999) 999-9999',        *
+               ATTRB=(UNPROT,FSET,NORM),HILIGHT=OFF,
+* Phone # input
+PHONE    DFHMDF POS=(16,11),LENGTH=14,INITIAL='(999) 999-9999',        *
+               ATTRB=(UNPROT,FSET,NORM),HILIGHT=OFF,                   *
+               VALIDN=MUSTFILL,COLOR=GREEN
+         DFHMDF POS=(16,26),LENGTH=0,                                  *
+               ATTRB=ASKIP
+         DFHMDF POS=(18,4),LENGTH=7,INITIAL='SALARY:',                 *
+               ATTRB=ASKIP
+SALARY   DFHMDF POS=(18,12),LENGTH=7,                                  *
+               ATTRB=NUM,PICIN='9(7)',PICOUT='9(7)'
+         DFHMDF POS=(18,20),LENGTH=1,                                  *
+               ATTRB=ASKIP
+INSTR    DFHMDF POS=(22,19),                                           X
+               ATTRB=(PROT,BRT),                                       X
+               LENGTH=040,                                             X
+               INITIAL='ENTER - ADD RECORD    PF3 - EXIT TO MENU'
+MSG      DFHMDF POS=(23,20),                                           X
+               ATTRB=(PROT,BRT),                                       X
+               LENGTH=040
+         DFHMSD TYPE=FINAL
+         END

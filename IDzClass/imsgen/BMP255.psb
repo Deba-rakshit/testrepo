@@ -1,0 +1,87 @@
+//PSBGEN1  JOB CDC,CLASS=H,MSGLEVEL=(1,1),REGION=3000K,TIME=1440,
+//        MSGCLASS=A
+/*ROUTE PRINT THISCPU/ALEXHAN
+//************************************************************
+//* SCRATCH/ALLOC TEMP LIBRARY FOR VSO TESTING               *
+//************************************************************
+//SCRDSETS EXEC PGM=IEHPROGM
+//SYSPRINT DD SYSOUT=A
+//DD1      DD UNIT=SYSDA,VOLUME=SER=000000,DISP=SHR
+//DD2      DD UNIT=SYSDA,DISP=SHR,VOLUME=SER=000000
+//SYSIN    DD *
+      SCRATCH  DSNAME=HOSPITAL.PSBLIB,VOL=SYSDA=000000
+      UNCATLG  DSNAME=HOSPITAL.PSBLIB
+      SCRATCH  DSNAME=IMSTESTT.HOSPITAL.PSBLIB,VOL=SYSDA=000000
+      UNCATLG  DSNAME=IMSTESTT.HOSPITAL.PSBLIB
+/*
+//ALLOC  EXEC  PGM=IEFBR14,COND=(4095,EQ)
+//DD1      DD  DSN=IMSTESTT.HOSPITAL.PSBLIB,DISP=(NEW,CATLG,DELETE),
+//            UNIT=SYSDA,
+//            VOL=SER=000000,SPACE=(CYL,(2,1,5)),
+//           DCB=(DSORG=PO,RECFM=U,BLKSIZE=13030)
+//SYSPRINT DD  SYSOUT=A
+/*
+//PSBGEN1   EXEC ASMLK%%%,
+//       LNKOUT='IMSTESTT.HOSPITAL.PSBLIB(BMP255),VOL=SER=000000'
+//ASSEM.SYSIN  DD *
+*        DSNAME=IMS%%%C.PSBLIB
+*        VOL=IMSDCL
+***********************************************************************
+*        PCB NUMBER 1      TP   NUMBER 1
+***********************************************************************
+  PCB       TYPE=TP,                                                   C
+               LTERM=CTRL,                                             C
+               ALTRESP=NO,                                             C
+               SAMETRM=NO,                                             C
+               MODIFY=NO,                                              C
+               EXPRESS=NO
+***********************************************************************
+*        PCB NUMBER 2      TP   NUMBER 2
+***********************************************************************
+  PCB       TYPE=TP,                                                   C
+               LTERM=,                                                 C
+               ALTRESP=YES,                                            C
+               SAMETRM=YES,                                            C
+               MODIFY=YES,                                             C
+               EXPRESS=NO
+***********************************************************************
+*        PCB NUMBER 3      TP   NUMBER 3
+***********************************************************************
+  PCB       TYPE=TP,                                                   C
+               LTERM=,                                                 C
+               ALTRESP=NO,                                             C
+               SAMETRM=NO,                                             C
+               MODIFY=YES,                                             C
+               EXPRESS=YES
+***********************************************************************
+*        PCB NUMBER 4      TP   NUMBER 4
+***********************************************************************
+  PCB       TYPE=TP,                                                   C
+               LTERM=,                                                 C
+               ALTRESP=NO,                                             C
+               SAMETRM=NO,                                             C
+               MODIFY=YES,                                             C
+               EXPRESS=NO
+***********************************************************************
+*        PCB NUMBER 5      DB   NUMBER 1
+***********************************************************************
+  PCB       TYPE=DB,DBDNAME=DEDBJN21,POS=M,PROCOPT=A,KEYLEN=26,        C
+               PCBNAME=PCB01
+    SENSEG  NAME=HOSPITAL,PARENT=0
+    SENSEG  NAME=PAYMENTS,PARENT=HOSPITAL,PROCOPT=GI
+    SENSEG  NAME=WARD,PARENT=HOSPITAL
+    SENSEG  NAME=PATIENT,PARENT=WARD
+    SENSEG  NAME=ILLNESS,PARENT=PATIENT
+    SENSEG  NAME=TREATMNT,PARENT=ILLNESS
+    SENSEG  NAME=DOCTOR,PARENT=TREATMNT
+    SENSEG  NAME=BILLING,PARENT=PATIENT
+***********************************************************************
+*        PCB NUMBER 6      DB   NUMBER 1
+***********************************************************************
+  PCB       TYPE=DB,DBDNAME=IVPDB1,PROCOPT=A,KEYLEN=10,                C00002100
+               PCBNAME=PCB02
+         SENSEG NAME=A1111111,PARENT=0,PROCOPT=A                        00002200
+    PSBGEN  PSBNAME=BMP255,LANG=ASSEM,CMPAT=YES
+    END  ,   ENDOF PSB GEN
+/*
+/*

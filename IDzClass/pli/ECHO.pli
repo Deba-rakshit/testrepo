@@ -1,0 +1,81 @@
+*Process SOURCE, TEST;
+ /********************************************************************/
+ /*                                                                  */
+ /* Echo - PL/I Program to read the contents of a file and display   */
+ /*        the contents on the terminal.                             */
+ /* On windows: set dd:InFile=<sourceFileLocation>                   */
+ /* On MVS //INFILE DD DSN=<sourceFileDSN>,DISP=SHR                  */
+ /*                                                                  */
+ /* If on MVS, comment out the Display/Reply statement at end of pgm */
+ /*                                                                  */
+ /********************************************************************/
+
+ Echo: Procedure Options(main);
+
+    Dcl Sysprint      File Output Stream;
+    Dcl Sysin         File Input  Stream ;
+    Dcl InFile        File Input  Record   Env(Recsize(80));
+    Dcl Buffer        Character(80) Var Init
+     ("123456789*123456789*123456789*123456789*123456789*123456789*");
+
+    Dcl NumberOfRecs  Fixed Bin(31) Init(0);
+    DECLARE abc Fixed BIN (31);
+
+    Dcl True          Bit(1)      Init('1'B);
+    Dcl False         Bit(1)      Init('0'B);
+    Dcl EndOfFile     Bit(1)      Init(False);
+    Dcl BadFile       Bit(1)      Init(False);
+    Dcl TheTitle      Char(125)   Varying;
+    Dcl Answer        Char(1);
+
+    Dcl ONCODE        Builtin;
+    Dcl ONFILE        Builtin;
+
+    TheTitle = "Today is " || DATETIME('YYYYMMDD');
+
+    On Endfile( InFile )
+       EndOfFile = True;
+
+    On UndefinedFile( InFile )
+       Begin;
+          Put Skip List("Oncode = " || ONCODE() );
+          Put Skip List("Onfile = " || ONFILE() );
+          EndOfFile = True;
+          BadFile = True;
+       End;
+
+ StartWork:
+    Put Skip File(Sysprint) List("Starting the Echo Program!");
+    Put Skip File(Sysprint) List( TheTitle );
+
+    Open File(InFile) ;
+
+    If ( BadFile = False) Then
+       Do;
+
+          Put Skip List ("The location of the input file is ",
+                          FILEDDWORD( InFile, "filename" ));
+
+          Read File( InFile ) into (Buffer);
+
+          Do While ( EndOfFile = False );
+
+             NumberOfRecs = NumberOfRecs + 1;
+             Put Skip File(Sysprint) List(NumberOfRecs || Buffer);
+
+             Read File( InFile ) into (Buffer);
+          End;
+
+       End;
+  CleanUp:
+    Close File(InFile);
+
+    Put Skip File(Sysprint) List("Number of Records Read is ",
+                                  NumberOfRecs );
+    Put Skip File(Sysprint) List("Exiting the Echo Program!");
+
+    Close File(Sysprint);
+ EndWork:
+  /**  Display("TTFN") reply(Answer); **/
+
+ End Echo;

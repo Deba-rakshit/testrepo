@@ -1,0 +1,46 @@
+*********************************************************************** 00010000
+EPSM01    DFHMSD TYPE=&SYSPARM,MODE=INOUT,LANG=COBOL,              @P3CX00080000
+               STORAGE=AUTO,TIOAPFX=YES,DSATTS=(COLOR,HILIGHT),        X00090000
+               MAPATTS=(COLOR,HILIGHT)                                  00091000
+*       MENU MAP.
+EPMENU  DFHMDI SIZE=(24,80),CTRL=(PRINT,FREEKB)                         00110000
+        DFHMDF POS=(5,25),LENGTH=37,                                   *
+               INITIAL='EPS TOOLS BIRTHDAY/RETIREMENT EXAMPLE',        *
+               ATTRB=(ASKIP,BRT)
+        DFHMDF POS=(8,15),ATTRB=(ASKIP,NORM),LENGTH=23,                X00140000
+               INITIAL='PLEASE ENTER BIRTHDATE:'                        00150000
+EPBDAY  DFHMDF POS=(8,39),ATTRB=(UNPROT,NORM,IC),LENGTH=8,             X00160000
+               INITIAL='YYYYMMDD'                                       00170000
+        DFHMDF POS=(8,48),ATTRB=(PROT,ASKIP)                            00180000
+EPBDAYM  DFHMDF POS=(9,33),LENGTH=41,                                  *
+               INITIAL='PLEASE RE-ENTER, DATE MUST BE YYYYMMDD',       *
+               ATTRB=(PROT,DRK)
+EPBDAYI DFHMDF POS=(10,23),ATTRB=(UNPROT,NORM,NUM,FSET),LENGTH=1,      X00210000
+               INITIAL='1'                                              00220000
+        DFHMDF POS=(10,25),ATTRB=(PROT,ASKIP),LENGTH=1                  00230000
+EPBDAYD DFHMDF POS=(10,27),ATTRB=(PROT,NORM),LENGTH=45,                X00240000
+               INITIAL='ENTER A 1 TO SEE YOUR BIRTHDAY'                 00250000
+EPBDAYR DFHMDF POS=(11,27),ATTRB=(PROT,NORM),LENGTH=45,                X00260000
+               INITIAL='ENTER A 2 TO CALCULATE YOUR RETIREMENT'         00270000
+EPBDFMT DFHMDF POS=(13,15),ATTRB=(PROT,DRK),LENGTH=45,                 X00280000
+               INITIAL='HERE IS YOUR BIRTHDATE AND NO DAYS FROM CURR'   00290000
+EPBDFM1 DFHMDF POS=(15,12),ATTRB=(PROT,DRK),LENGTH=24,                 X00290100
+               INITIAL='YOUR BIRTHDATE AND DAY: '                       00290200
+EPBDFM2 DFHMDF POS=(15,40),ATTRB=(PROT,DRK),LENGTH=29                   00291000
+EPDIFF1 DFHMDF POS=(17,12),ATTRB=(PROT,DRK),LENGTH=24,                 X00291100
+               INITIAL='HOW LONG AGO WAS THIS?: '                       00291200
+EPDIFF2 DFHMDF POS=(17,40),ATTRB=(PROT,DRK),LENGTH=9                    00291300
+EPDIFF3 DFHMDF POS=(17,50),ATTRB=(PROT,DRK),LENGTH=4,                  X00291400
+               INITIAL='DAYS'                                           00291500
+EPBRET  DFHMDF POS=(19,15),ATTRB=(PROT,DRK),LENGTH=27,                 X00292000
+               INITIAL='IF YOU WANT TO RETIRE AT 65 '                   00293000
+EPRET1  DFHMDF POS=(21,12),ATTRB=(PROT,DRK),LENGTH=26,                 X00293100
+               INITIAL='YOU WILL REACH AGE 65 ON: '                     00293200
+EPRET2  DFHMDF POS=(21,40),ATTRB=(PROT,DRK),LENGTH=35                   00293300
+MSGOUT  DFHMDF POS=(23,10),ATTRB=(PROT,ASKIP),LENGTH=58,               X00320000
+               INITIAL='F3/F12 TO TERMINATE, ENTER TO PROCESS, CLEAR TOX00330000
+                START OVER'                                             00331000
+MSGERR  DFHMDF POS=(24,15),ATTRB=(PROT,DRK),LENGTH=40,                 X00340000
+               INITIAL='INVALID KEY PRESSED'                            00350000
+EPSM01  DFHMSD TYPE=FINAL                                               00360000
+        END                                                             00370000

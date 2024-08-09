@@ -1,0 +1,48 @@
+*Process SOURCE, TEST;
+ /********************************************************************/
+ /*                                                                  */
+ /* Reverse - Recursive routine to return a reversed string          */
+ /*                                                                  */
+ /********************************************************************/
+
+ Reverse: Procedure Options(main);
+
+    Dcl Sysprint      File Output Stream;
+    Dcl Sysin         File Input  Stream;
+    Dcl Temp          Fixed Bin(31) init(10);
+    Dcl Buffer        Character(100) Var Init
+                                   ("abcdefghijklmnopqrstuvwxyz");
+    Dcl Result        Character(80) Var;
+
+    Put Skip File(Sysprint) List("Starting the Reverse Program!");
+    Put Skip File(Sysprint) List("Original Sting was '" ||
+                                  Buffer ||
+                                  "'");
+
+    Result = ReverseString( Buffer );
+
+    Put Skip File(Sysprint) List("The reversed String is '" ||
+                                  Result ||
+                                  "'");
+    Put Skip File(Sysprint) List("Exiting the Echo Program!");
+
+    Close File(Sysprint);
+
+  /**  Display("TTFN") reply(Answer); **/
+
+  ReverseString: Procedure ( TheString ) Recursive
+                            returns (Char(80) Var);
+     Dcl TheString    Character(80) Varying;
+     Dcl size         fixed bin(31) init( length( TheString ));
+     Temp = Temp + 1;
+
+     if (size = 1) Then
+        return (TheString);
+        else if (size > 1) Then
+           return (Substr(TheString, size, 1) ||
+                   ReverseString(Substr(TheString, 1, size-1)));
+           Else
+              return ("***Error in the size - " || size || "****");
+  End;
+
+ End;
